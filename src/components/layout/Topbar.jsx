@@ -1,10 +1,22 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Menu, Bell, LogOut } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import Avatar from "@/components/ui/Avatar";
 
 export default function Topbar({ onMenuClick, name = "Admin", role = "Administrator" }) {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const displayName = session?.name || name;
+  const displayRole = session?.role || role;
+
+  async function handleLogout() {
+    if (!window.confirm("Are you sure to log out?")) return;
+    await signOut({ redirect: false });
+    router.push("/");
+  }
+
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-ink-100 bg-white/85 px-4 py-3 backdrop-blur sm:px-6">
       <button onClick={onMenuClick} className="rounded-lg p-2 text-ink-500 hover:bg-ink-100 lg:hidden">
@@ -21,19 +33,20 @@ export default function Topbar({ onMenuClick, name = "Admin", role = "Administra
         </button>
         <div className="h-6 w-px bg-ink-100" />
         <div className="flex items-center gap-2.5">
-          <Avatar name={name} />
+          <Avatar name={displayName} />
           <div className="hidden leading-tight sm:block">
-            <p className="text-sm font-medium text-ink-900">{name}</p>
-            <p className="text-xs text-ink-400">{role}</p>
+            <p className="text-sm font-medium text-ink-900">{displayName}</p>
+            <p className="text-xs text-ink-400">{displayRole}</p>
           </div>
         </div>
-        <Link
-          href="/login/users"
+        <button
+          type="button"
+          onClick={handleLogout}
           className="flex items-center gap-1.5 rounded-lg border border-ink-200 px-3 py-2 text-sm font-medium text-ink-600 hover:border-rose-300 hover:text-rose-500"
         >
           <LogOut size={15} />
           <span className="hidden sm:inline">Log out</span>
-        </Link>
+        </button>
       </div>
     </header>
   );
