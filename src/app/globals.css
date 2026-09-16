@@ -21,22 +21,6 @@
   --light-cream: #f5f7a5;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  border: none;
-}
-body {
-  font-family: Arial, sans-serif;
-  color: white;
-  margin: 0;
-  padding: 0;
-  background-color: var(--color-bg-deep);
-}
-.link {
-  color: var(--color-primary);
-}
 .waitH1 {
   display: flex;
   align-items: center;
@@ -45,10 +29,4 @@ body {
   min-height: 30vh;
   margin-bottom: 110px;
   text-align: center;
-}
-label {
-  cursor: pointer;
-}
-button .disable {
-  cursor: not-allowed;
 }
