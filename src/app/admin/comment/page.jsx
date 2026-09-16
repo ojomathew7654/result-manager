@@ -1,155 +1,33 @@
 "use client";
-import axios from "axios";
-import { useSession } from "next-auth/react";
-import Link from "next/link";
-import { redirect } from "next/navigation";
+
 import { useEffect, useState } from "react";
-import styles from "./remark.module.css";
+import axios from "axios";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Select from "@/components/ui/Select";
+import Field from "@/components/ui/Field";
 import Spinner from "@/components/Spinner/Spinner";
 
-const AllTeacherStudents = () => {
-  const { data: session, status: sessionStatus } = useSession();
+export default function StudentRemarks() {
+  const { data: session, status } = useSession();
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [schoolClasses, setSchoolClasses] = useState([]);
   const [academicYear, setAcademicYear] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
-  const [schoolClasses, setSchoolClasses] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => { if (session?.schoolId) axios.get(`/api/school/${session.schoolId}`).then(({ data }) => setSchoolClasses((data.classes || []).sort())); }, [session?.schoolId]);
   useEffect(() => {
-    const fetchSchoolClasses = async () => {
-      try {
-        const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        setSchoolClasses(data.classes.sort() || []);
-      } catch (error) {
-        console.error("Error fetching school classes:", error);
-      }
-    };
-
-    if (session?.schoolId) {
-      fetchSchoolClasses();
-    }
-  }, [session]);
-
-  const fetchStudentData = async (selectedClass, academicYear) => {
-    if (!selectedClass || !academicYear) return;
+    if (!session?.schoolId || !academicYear || !selectedClass) return;
     setLoading(true);
-    try {
-      const encodedAcademicYear = encodeURIComponent(academicYear);
-      const { data } = await axios.get(
-        `/api/student/class/${"FIRST"}-${
-          session.schoolId
-        }-${encodedAcademicYear}-${selectedClass}`
-      );
-      console.log(data);
-      setStudents(data);
-    } catch (err) {
-      console.log(err);
-    }
-    setLoading(false);
-  };
+    axios.get(`/api/student/class/FIRST-${session.schoolId}-${encodeURIComponent(academicYear)}-${selectedClass}`).then(({ data }) => setStudents([...data].sort((a, b) => (a.surname || "").localeCompare(b.surname || "")))).catch((error) => console.error(error)).finally(() => setLoading(false));
+  }, [academicYear, selectedClass, session?.schoolId]);
 
-  const handleAcademicYearChange = async (event) => {
-    const academicYear = event.target.value;
-    setAcademicYear(academicYear);
-    await fetchStudentData(selectedClass, academicYear);
-  };
+  if (status === "loading") return <div className="flex min-h-48 items-center justify-center gap-3 text-ink-500"><Spinner /> Please wait...</div>;
+  if (status !== "authenticated") redirect("/");
 
-  const handleClassChange = async (e) => {
-    const selectedClass = e.target.value;
-    setSelectedClass(selectedClass);
-    await fetchStudentData(selectedClass, academicYear);
-  };
-
-  if (sessionStatus === "loading")
-    return (
-      <h1 className="waitH1">
-        <Spinner /> Please wait...
-      </h1>
-    );
-  if (sessionStatus !== "authenticated") redirect("/");
-
-  students?.sort((a, b) => {
-    const surnameA = a.surname.toLowerCase().trim(); // Remove extra spaces
-    const surnameB = b.surname.toLowerCase().trim(); // Remove extra spaces
-
-    if (surnameA < surnameB) {
-      return -1;
-    }
-    if (surnameA > surnameB) {
-      return 1;
-    }
-    return 0;
-  });
-
-  return (
-    <div className={styles.result}>
-      <h1>{"Student's"} Remark</h1>
-      <div>
-        <div className={styles.selectContainer}>
-          <select
-            id="academicYearSelect"
-            value={academicYear}
-            onChange={handleAcademicYearChange}
-          >
-            <option value="" disabled>
-              Select academic year
-            </option>
-            <option value="2025/2026">2025/2026</option>
-          </select>
-          <select value={selectedClass} onChange={handleClassChange}>
-            <option value="">Select class</option>
-            {schoolClasses?.map((classItem) => (
-              <option key={classItem} value={classItem}>
-                {classItem}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      {loading && <h2>Please wait...</h2>}
-      <div className={styles.tableContainer}>
-        {students.length > 0 ? (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Surname</th>
-                <th>Name</th>
-                <th>Level</th>
-                <th>Variant</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((student, index) => (
-                <tr key={student.id}>
-                  <td>{index + 1}</td>
-                  <td>{student.surname}</td>
-                  <td>{student.name}</td>
-                  <td>{student.level}</td>
-                  <td>{student.variant}</td>
-                  <td>
-                    <button>
-                      <Link
-                        className={styles.link}
-                        href={`/admin/comment/${student.id}`}
-                      >
-                        Remark
-                      </Link>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          !loading &&
-          academicYear &&
-          selectedClass && <h1>No students found.</h1>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default AllTeacherStudents;
+  return <div><PageHeader title="Student remarks" subtitle="Select a class to add teacher and head-of-school remarks." /><Card className="mb-5"><CardBody className="grid gap-4 sm:grid-cols-2"><Field label="Academic year" htmlFor="academicYear"><Select id="academicYear" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)}><option value="">Select academic year</option><option value="2025/2026">2025/2026</option></Select></Field><Field label="Class" htmlFor="class"><Select id="class" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}><option value="">Select class</option>{schoolClasses.map((item) => <option key={item} value={item}>{item}</option>)}</Select></Field></CardBody></Card><Card><CardBody className="overflow-x-auto p-0"><table className="min-w-full text-left text-sm"><thead className="border-b border-ink-100 bg-ink-50 text-xs uppercase text-ink-500"><tr>{["No", "Surname", "Name", "Level", "Variant", "Action"].map((heading) => <th key={heading} className="px-4 py-3">{heading}</th>)}</tr></thead><tbody className="divide-y divide-ink-100">{loading ? <tr><td colSpan="6" className="px-5 py-10 text-center text-ink-400">Loading students...</td></tr> : students.map((student, index) => <tr key={student.id}><td className="px-4 py-3">{index + 1}</td><td className="px-4 py-3">{student.surname}</td><td className="px-4 py-3">{student.name}</td><td className="px-4 py-3">{student.level}</td><td className="px-4 py-3">{student.variant || "—"}</td><td className="px-4 py-3"><Link href={`/admin/comment/${student.id}`} className="font-medium text-brand-700 hover:text-brand-900">Add remark</Link></td></tr>)}</tbody></table>{!loading && !students.length && academicYear && selectedClass ? <p className="p-6 text-center text-ink-400">No students found.</p> : null}</CardBody></Card></div>;
+}

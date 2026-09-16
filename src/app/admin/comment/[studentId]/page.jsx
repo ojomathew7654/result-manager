@@ -2,8 +2,14 @@
 import { useState, useEffect } from "react";
 import { redirect, useRouter } from "next/navigation";
 import axios from "axios";
-import styles from "../remark.module.css";
 import Spinner from "@/components/Spinner/Spinner";
+import { ArrowLeft, Save } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Input from "@/components/ui/Input";
+import Textarea from "@/components/ui/Textarea";
+import Button from "@/components/ui/Button";
 
 const EachStudentResult = ({ params }) => {
   const { studentId } = params;
@@ -261,88 +267,53 @@ const EachStudentResult = ({ params }) => {
         <Spinner /> Working on student comment, please wait...
       </h1>
     );
-  console.log(headOfSchoolRemark);
-
   return (
-    <div className={styles.container}>
-      <div className={styles.studentRemark}>
-        <h2>Student Traits Form</h2>
-        <div className={styles.flex}>
-          <div className={styles.div1}>
-            <div>
-              <label>
-                Form Teacher Names:
-                <input
-                  rows={3}
-                  value={formTeacherName}
-                  onChange={(e) => setFormTeacherName(e.target.value)}
-                />
-              </label>
-            </div>
-            <div className={styles.remarkTextarea}>
-              <label>
-                Form Teacher Remarks:
-                <textarea
-                  rows={3}
-                  value={formTeacherRemark}
-                  onChange={(e) => setFormTeacherRemark(e.target.value)}
-                />
-              </label>
-            </div>
-            <div>
-              <label>
-                Principal/Head Master Remarks:
-                <textarea
-                  rows={3}
-                  value={headOfSchoolRemark}
-                  onChange={(e) => setHeadOfSchoolRemark(e.target.value)}
-                />
-              </label>
-            </div>
-            <div>
-              <h3>Psychomotor Skills</h3>
-              {psychomotor.map((trait, index) => (
-                <div key={index}>
-                  <label>{trait.trait}</label>
-                  <input
-                    type="text"
-                    value={trait.rating}
-                    onChange={(e) => {
-                      const updatedTraits = [...psychomotor];
-                      updatedTraits[index].rating = e.target.value;
-                      setPsychomotor(updatedTraits);
-                    }}
-                  />
+    <div>
+      <PageHeader
+        title="Student remarks"
+        subtitle={`Update comments and traits for ${student?.name || "this student"}.`}
+        action={<Button type="button" variant="outline" icon={ArrowLeft} onClick={() => router.back()}>Back</Button>}
+      />
+      <Card className="max-w-5xl">
+        <CardBody>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-5">
+              <Field label="Form teacher name" htmlFor="formTeacherName">
+                <Input id="formTeacherName" value={formTeacherName} onChange={(e) => setFormTeacherName(e.target.value)} />
+              </Field>
+              <Field label="Form teacher remark" htmlFor="formTeacherRemark">
+                <Textarea id="formTeacherRemark" rows={4} value={formTeacherRemark} onChange={(e) => setFormTeacherRemark(e.target.value)} />
+              </Field>
+              <Field label="Principal/headmaster remark" htmlFor="headOfSchoolRemark">
+                <Textarea id="headOfSchoolRemark" rows={4} value={headOfSchoolRemark} onChange={(e) => setHeadOfSchoolRemark(e.target.value)} />
+              </Field>
+              <div>
+                <h2 className="mb-3 font-display text-base font-semibold text-ink-900">Psychomotor skills</h2>
+                <div className="space-y-3">
+                  {psychomotor.map((trait, index) => (
+                    <Field key={trait.trait} label={trait.trait} htmlFor={`psychomotor-${index}`}>
+                      <Input id={`psychomotor-${index}`} value={trait.rating} onChange={(e) => setPsychomotor((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, rating: e.target.value } : item))} />
+                    </Field>
+                  ))}
                 </div>
-              ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="mb-3 font-display text-base font-semibold text-ink-900">Effective traits</h2>
+              <div className="space-y-3">
+                {effectiveTraits.map((trait, index) => (
+                  <Field key={trait.trait} label={trait.trait} htmlFor={`effective-${index}`}>
+                    <Input id={`effective-${index}`} value={trait.rating} onChange={(e) => setEffectiveTraits((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, rating: e.target.value } : item))} />
+                  </Field>
+                ))}
+              </div>
             </div>
           </div>
-          <div className={styles.div2}>
-            <h3>Effective Traits</h3>
-            {effectiveTraits.map((trait, index) => (
-              <div key={index}>
-                <label>{trait.trait}</label>
-                <input
-                  type="text"
-                  value={trait.rating}
-                  onChange={(e) => {
-                    const updatedTraits = [...effectiveTraits];
-                    updatedTraits[index].rating = e.target.value;
-                    setEffectiveTraits(updatedTraits);
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-        <button
-          onClick={handleSave}
-          className={isLoading && styles.disabled}
-          disabled={isLoading}
-        >
-          {isLoading ? "Saving..." : "Save"}
-        </button>
-      </div>
+          <Button type="button" icon={Save} disabled={isLoading} onClick={handleSave} className="mt-6">
+            {isLoading ? "Saving..." : "Save changes"}
+          </Button>
+        </CardBody>
+      </Card>
     </div>
   );
 };
