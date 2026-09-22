@@ -2,7 +2,6 @@
 import axios from "axios";
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import styles from "../../task.module.css";
 import Spinner from "@/components/Spinner/Spinner";
 
 export default function AssignmentSubmissions({ params }) {

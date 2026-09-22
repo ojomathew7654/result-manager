@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import styles from "../task.module.css";
 import axios from "axios";
 import TaskComponent from "@/components/taskComponent/TaskComponent";
 import { useSession } from "next-auth/react";
