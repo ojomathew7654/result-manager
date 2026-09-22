@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import axios from "axios";
-import { BookOpen, Plus, Pencil, Trash2, Check, X, SlidersHorizontal, BookPlus, AlertCircle } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, Check, X, BookPlus } from "lucide-react";
 
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
@@ -12,8 +12,6 @@ import Field from "@/components/ui/Field";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
-import AlertDialog from "@/components/others/AlertDialog";
 import Spinner from "@/components/Spinner/Spinner";
 
 const NewSubject = () => {
@@ -22,13 +20,19 @@ const NewSubject = () => {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [editingSubject, setEditingSubject] = useState(null);
   const [editedSubjectName, setEditedSubjectName] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  // Independent loading states for individual actions
+  const [createLoading, setCreateLoading] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [removeLoading, setRemoveLoading] = useState(false);
+  const [saveEditLoading, setSaveEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const [schoolSubjects, setSchoolSubjects] = useState([]);
   const [schoolClasses, setSchoolClasses] = useState([]);
   const { data: session, status: sessionStatus } = useSession();
-  const [alertMessage, setAlertMessage] = useState("");
   const [academicYear, setAcademicYear] = useState("");
-  const [openAlert, setOpenAlert] = useState(false);
 
   useEffect(() => {
     if (sessionStatus === "authenticated") {
@@ -67,11 +71,10 @@ const NewSubject = () => {
   const saveEditedSubject = async () => {
     const trimmedEditedSubjectName = editedSubjectName.trim();
     if (!trimmedEditedSubjectName) {
-      setAlertMessage("Please enter a valid subject name.");
-      setOpenAlert(true);
+      alert("Please enter a valid subject name.");
       return;
     }
-    setLoading(true);
+    setSaveEditLoading(true);
     try {
       const updatedSubjects = schoolSubjects.map((subject) =>
         subject === editingSubject ? trimmedEditedSubjectName : subject
@@ -79,15 +82,15 @@ const NewSubject = () => {
       const { data } = await axios.patch(`/api/school/${session.schoolId}`, {
         subjects: updatedSubjects,
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
+      alert(data.message);
       setSchoolSubjects(updatedSubjects);
       setEditingSubject(null);
       setEditedSubjectName("");
     } catch (err) {
       console.log(err);
+      alert("Error updating subject name.");
     } finally {
-      setLoading(false);
+      setSaveEditLoading(false);
     }
   };
 
@@ -103,44 +106,39 @@ const NewSubject = () => {
     e.preventDefault();
     const trimmedNewSubject = newSubject.trim();
     if (!trimmedNewSubject) {
-      setAlertMessage("Please enter a valid subject name.");
-      setOpenAlert(true);
+      alert("Please enter a valid subject name.");
       return;
     }
     const subjectExists = schoolSubjects.some(
       (subject) => subject.toLowerCase() === trimmedNewSubject.toLowerCase()
     );
     if (subjectExists) {
-      setAlertMessage("Subject already exists.");
-      setOpenAlert(true);
+      alert("Subject already exists.");
       return;
     }
-    setLoading(true);
+    setCreateLoading(true);
     try {
       const updatedSubjects = [...schoolSubjects, trimmedNewSubject];
       const { data } = await axios.patch(`/api/school/${session.schoolId}`, {
         subjects: updatedSubjects,
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
+      alert(data.message);
       setSchoolSubjects(updatedSubjects);
       setNewSubject("");
     } catch (err) {
       console.log(err);
+      alert("Error creating subject.");
     } finally {
-      setLoading(false);
+      setCreateLoading(false);
     }
   };
 
   const addSubject = async () => {
     if (!academicYear || !selectedClass || !selectedSubject) {
-      setAlertMessage(
-        "Please select from academicYear, Class, Subject, and Term."
-      );
-      setOpenAlert(true);
+      alert("Please select academic year, Class, and Subject.");
       return;
     }
-    setLoading(true);
+    setAddLoading(true);
     try {
       const className = selectedClass.split("-");
       const { data } = await axios.post("/api/subject", {
@@ -150,12 +148,12 @@ const NewSubject = () => {
         schoolId: session.schoolId,
         academicYear: academicYear,
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
+      alert(data.message);
     } catch (error) {
       console.error("Error adding subject:", error);
+      alert("Error adding subject to class.");
     } finally {
-      setLoading(false);
+      setAddLoading(false);
     }
   };
 
@@ -167,13 +165,12 @@ const NewSubject = () => {
       !selectedSubject ||
       !trimmedNewSubject
     ) {
-      setAlertMessage(
-        "Please enter new subject, select from academicYear, Class and old Subject."
+      alert(
+        "Please enter new subject name in 'Create New Subject' field, and select academic year, Class, and current Subject."
       );
-      setOpenAlert(true);
       return;
     }
-    setLoading(true);
+    setEditLoading(true);
     try {
       const className = selectedClass.split("-");
       const { data } = await axios.put("/api/subject", {
@@ -184,24 +181,21 @@ const NewSubject = () => {
         currentSubjectName: selectedSubject,
         newSubjectName: trimmedNewSubject,
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
+      alert(data.message);
     } catch (error) {
-      console.error("Error adding subject:", error);
+      console.error("Error editing subject:", error);
+      alert("Error updating class subject.");
     } finally {
-      setLoading(false);
+      setEditLoading(false);
     }
   };
 
   const removeSubject = async () => {
     if (!academicYear || !selectedClass || !selectedSubject) {
-      setAlertMessage(
-        "Please select from academicYear, Class, Subject, and Term."
-      );
-      setOpenAlert(true);
+      alert("Please select academic year, Class, and Subject.");
       return;
     }
-    setLoading(true);
+    setRemoveLoading(true);
     try {
       const className = selectedClass.split("-");
       const { data } = await axios.delete("/api/subject", {
@@ -213,12 +207,12 @@ const NewSubject = () => {
           academicYear: academicYear,
         },
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
+      alert(data.message);
     } catch (error) {
       console.error("Error removing subject:", error);
+      alert("Error removing subject from class.");
     } finally {
-      setLoading(false);
+      setRemoveLoading(false);
     }
   };
 
@@ -227,7 +221,7 @@ const NewSubject = () => {
       return;
     }
 
-    setLoading(true);
+    setDeleteLoading(true);
     try {
       const { data } = await axios.delete(
         `/api/school/subject/${session.schoolId}-${subjectName}`,
@@ -235,15 +229,15 @@ const NewSubject = () => {
           data: { schoolId: session.schoolId, subjectName },
         }
       );
-      setAlertMessage(data.message);
-      setOpenAlert(true);
+      alert(data.message);
       setSchoolSubjects(
         schoolSubjects.filter((subject) => subject !== subjectName)
       );
     } catch (err) {
       console.log(err);
+      alert("Error deleting subject.");
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
     }
   };
 
@@ -264,10 +258,6 @@ const NewSubject = () => {
         title="Subject Management"
         subtitle="Create global subjects for your school or manage subject allocations per class."
       />
-
-      {openAlert && (
-        <AlertDialog message={alertMessage} setOpenAlert={setOpenAlert} />
-      )}
 
       {/* Grid for Create Global Subject and Class Subject Allocations */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -291,12 +281,12 @@ const NewSubject = () => {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={createLoading}
                 variant="primary"
                 icon={Plus}
                 className="w-full"
               >
-                {loading ? "Processing..." : "Create Subject"}
+                {createLoading ? "Creating..." : "Create Subject"}
               </Button>
             </form>
           </CardBody>
@@ -352,36 +342,36 @@ const NewSubject = () => {
 
             <div className="flex flex-wrap items-center gap-2 pt-2">
               <Button
-                disabled={loading}
+                disabled={addLoading}
                 variant="primary"
                 size="sm"
                 icon={BookPlus}
                 onClick={addSubject}
                 className="flex-1"
               >
-                {loading ? "Wait..." : "Add to Class"}
+                {addLoading ? "Adding..." : "Add to Class"}
               </Button>
 
               <Button
-                disabled={loading}
+                disabled={editLoading}
                 variant="outline"
                 size="sm"
                 icon={Pencil}
                 onClick={editSubject}
                 className="flex-1"
               >
-                {loading ? "Wait..." : "Update Class Subj"}
+                {editLoading ? "Updating..." : "Update Class Subj"}
               </Button>
 
               <Button
-                disabled={loading}
+                disabled={removeLoading}
                 variant="danger"
                 size="sm"
                 icon={Trash2}
                 onClick={removeSubject}
                 className="flex-1"
               >
-                {loading ? "Wait..." : "Remove"}
+                {removeLoading ? "Removing..." : "Remove"}
               </Button>
             </div>
           </CardBody>
@@ -416,15 +406,15 @@ const NewSubject = () => {
                         className="h-8 text-sm"
                       />
                       <Button
-                        disabled={loading}
+                        disabled={saveEditLoading}
                         variant="primary"
                         size="sm"
                         onClick={saveEditedSubject}
                       >
-                        <Check size={14} />
+                        {saveEditLoading ? "..." : <Check size={14} />}
                       </Button>
                       <Button
-                        disabled={loading}
+                        disabled={saveEditLoading}
                         variant="ghost"
                         size="sm"
                         onClick={() => setEditingSubject(null)}
@@ -447,8 +437,9 @@ const NewSubject = () => {
                           <Pencil size={14} />
                         </button>
                         <button
+                          disabled={deleteLoading}
                           onClick={() => deleteSubject(subject)}
-                          className="rounded p-1 text-ink-400 hover:bg-rose-50 hover:text-rose-600"
+                          className="rounded p-1 text-ink-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
                           title="Delete"
                         >
                           <Trash2 size={14} />
