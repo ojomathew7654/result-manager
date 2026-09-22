@@ -1,10 +1,16 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import styles from "./Attendance.module.css";
 import { parse, addDays, format, differenceInDays } from "date-fns";
 import axios from "axios";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Save, CalendarCheck } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Select from "@/components/ui/Select";
+import Field from "@/components/ui/Field";
+import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
 
 const resumptionDateStr = "Monday 22/04/2024";
@@ -18,6 +24,8 @@ const AttendanceRegister = () => {
   const [termType, setTermType] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const resumptionDate = parse(
     resumptionDateStr,
     "EEEE dd/MM/yyyy",
@@ -27,13 +35,15 @@ const AttendanceRegister = () => {
   const totalDays = differenceInDays(currentDate, resumptionDate);
   const currentWeekIndex = Math.floor(totalDays / 7);
   const currentDayIndex = totalDays % 7;
+
   const { data: session, status: sessionStatus } = useSession();
   const [schoolClasses, setSchoolClasses] = useState([]);
+
   useEffect(() => {
     const fetchSchoolClasses = async () => {
       try {
         const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        setSchoolClasses(data.classes);
+        setSchoolClasses(data.classes || []);
       } catch (error) {
         console.error("Error fetching school classes:", error);
       }
@@ -42,12 +52,10 @@ const AttendanceRegister = () => {
       fetchSchoolClasses();
     }
   }, [session]);
+
   useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      if (session.role !== "ADMIN") {
-        signOut();
-        redirect("/");
-      }
+    if (sessionStatus === "authenticated" && session?.role !== "ADMIN") {
+      signOut({ redirect: false }).then(() => redirect("/"));
     }
   }, [sessionStatus, session]);
 
@@ -68,8 +76,8 @@ const AttendanceRegister = () => {
               return weekAcc;
             }, {});
           }
-          if (student.attendance.length > 0) {
-            const presentDates = student.attendance[0].presentDates;
+          if (student.attendance && student.attendance.length > 0) {
+            const presentDates = student.attendance[0].presentDates || [];
             for (const dateStr of presentDates) {
               const date = new Date(dateStr);
               const weekIndex = Math.floor(
@@ -97,32 +105,37 @@ const AttendanceRegister = () => {
   };
 
   const fetchStudentData = async (termType, selectedClass, academicYear) => {
-    console.log(termType, selectedClass, academicYear);
     if (!termType || !selectedClass || !academicYear) return;
-    const encodedAcademicYear = encodeURIComponent(academicYear);
-    const { data } = await axios.get(
-      `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
-    );
-    console.log(data);
-    setStudents(data);
+    setLoading(true);
+    try {
+      const encodedAcademicYear = encodeURIComponent(academicYear);
+      const { data } = await axios.get(
+        `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+      );
+      setStudents(data || []);
+    } catch (error) {
+      console.error("Error fetching student attendance data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAcademicYearChange = async (event) => {
-    const academicYear = event.target.value;
-    setAcademicYear(academicYear);
-    await fetchStudentData(termType, selectedClass, academicYear);
+    const value = event.target.value;
+    setAcademicYear(value);
+    await fetchStudentData(termType, selectedClass, value);
   };
 
   const handleClassChange = async (event) => {
-    const selectedClass = event.target.value;
-    setSelectedClass(selectedClass);
-    await fetchStudentData(termType, selectedClass, academicYear);
+    const value = event.target.value;
+    setSelectedClass(value);
+    await fetchStudentData(termType, value, academicYear);
   };
 
   const handleTermChange = async (event) => {
-    const termType = event.target.value;
-    setTermType(termType);
-    await fetchStudentData(termType, selectedClass, academicYear);
+    const value = event.target.value;
+    setTermType(value);
+    await fetchStudentData(value, selectedClass, academicYear);
   };
 
   const handleCheck = (student, week, day) => {
@@ -149,7 +162,7 @@ const AttendanceRegister = () => {
       alert("Please select academic year and term");
       return;
     }
-    setLoading(true);
+    setSaving(true);
     try {
       await Promise.all(
         students.map(async (student) => {
@@ -189,7 +202,7 @@ const AttendanceRegister = () => {
       console.error("Failed to update attendance", err);
       alert("Network Error. Please try again later.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -204,138 +217,196 @@ const AttendanceRegister = () => {
       );
     }, 0);
   };
-  if (sessionStatus == "loading")
+
+  if (sessionStatus === "loading") {
     return (
-      <h1 className="waitH1">
+      <div className="flex min-h-48 items-center justify-center gap-3 text-ink-500">
         <Spinner /> Please wait...
-      </h1>
+      </div>
     );
+  }
+
   if (sessionStatus !== "authenticated") redirect("/");
 
   return (
-    <div className={styles.container}>
-      <h1>Attendance Register</h1>
-      <div className={styles.selectContainer}>
-        <select
-          id="classSelect"
-          value={selectedClass}
-          onChange={handleClassChange}
-        >
-          <option value={""} disabled>
-            Select Class
-          </option>
-          {schoolClasses.map((className) => (
-            <option key={className} value={className}>
-              {className}
-            </option>
-          ))}
-        </select>
-        <select id="termSelect" value={termType} onChange={handleTermChange}>
-          <option value="" disabled>
-            Select Term
-          </option>
-          <option value="FIRST">First Term</option>
-          <option value="SECOND">Second Term</option>
-          <option value="THIRD">Third Term</option>
-        </select>
-        <select
-          id="academicYearSelect"
-          value={academicYear}
-          onChange={handleAcademicYearChange}
-        >
-          <option value="" disabled>
-            Select academy year
-          </option>
-          <option value="2025/2026">2025/2026</option>
-        </select>
-      </div>
-      {selectedClass !== "" && (
-        <div className={styles.tableContainer}>
+    <div>
+      <PageHeader
+        title="Attendance Register"
+        subtitle="Manage and mark student attendance by session, term, and class."
+        action={
+          <Button as={Link} href="/admin" variant="outline" icon={ArrowLeft}>
+            Dashboard
+          </Button>
+        }
+      />
+
+      <Card className="mb-6">
+        <CardBody className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Field label="Class" htmlFor="classSelect">
+            <Select
+              id="classSelect"
+              value={selectedClass}
+              onChange={handleClassChange}
+            >
+              <option value="" disabled>
+                Select Class
+              </option>
+              {schoolClasses.map((className) => (
+                <option key={className} value={className}>
+                  {className}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Term" htmlFor="termSelect">
+            <Select id="termSelect" value={termType} onChange={handleTermChange}>
+              <option value="" disabled>
+                Select Term
+              </option>
+              <option value="FIRST">First Term</option>
+              <option value="SECOND">Second Term</option>
+              <option value="THIRD">Third Term</option>
+            </Select>
+          </Field>
+
+          <Field label="Academic Year" htmlFor="academicYearSelect">
+            <Select
+              id="academicYearSelect"
+              value={academicYear}
+              onChange={handleAcademicYearChange}
+            >
+              <option value="" disabled>
+                Select Academic Year
+              </option>
+              <option value="2025/2026">2025/2026</option>
+            </Select>
+          </Field>
+        </CardBody>
+      </Card>
+
+      {selectedClass !== "" ? (
+        <div className="space-y-6">
           {weeks.reduce((acc, week, index) => {
             if (index % 2 === 0) {
               acc.push(
-                <table className={styles.attendanceTable} key={week}>
-                  <thead>
-                    <tr>
-                      <th rowSpan={2}>No</th>
-                      <th rowSpan={2}>Surname</th>
-                      <th rowSpan={2}>Name</th>
-                      {weeks.slice(index, index + 2).map((week, weekIndex) => (
-                        <th
-                          key={week}
-                          className={`${
-                            index + weekIndex === currentWeekIndex
-                              ? styles.currentWeek
-                              : styles.allweeks
-                          }`}
-                          colSpan={days.length}
-                        >
-                          <strong>{week}</strong>
-                        </th>
-                      ))}
-                      {index + 2 >= weeks.length && <th rowSpan={2}>Total</th>}
-                    </tr>
-                    <tr>
-                      {weeks.slice(index, index + 2).map((week, weekIndex) =>
-                        days.map((day, dayIndex) => (
-                          <th
-                            key={week + day}
-                            className={
-                              dayIndex === currentDayIndex &&
-                              index + weekIndex === currentWeekIndex
-                                ? styles.currentDay
-                                : ""
-                            }
-                          >
-                            {day.charAt(0)}
-                          </th>
-                        ))
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {students.map((student, studentIndex) => (
-                      <tr key={student.id}>
-                        <td>{studentIndex + 1}</td>
-                        <td>{student.surname}</td>
-                        <td>{student.name}</td>
-                        {weeks.slice(index, index + 2).map((week) =>
-                          days.map((day) => (
-                            <td key={student.id + week + day}>
-                              <input
-                                type="checkbox"
-                                checked={
-                                  attendance[student.id]?.[week]?.[day] || false
-                                }
-                                onChange={() => handleCheck(student, week, day)}
-                              />
+                <Card key={week}>
+                  <CardBody className="overflow-x-auto p-0">
+                    <table className="min-w-full text-left text-sm border-collapse">
+                      <thead className="border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
+                        <tr>
+                          <th rowSpan={2} className="px-4 py-3 border-r border-ink-100">No</th>
+                          <th rowSpan={2} className="px-4 py-3 border-r border-ink-100">Surname</th>
+                          <th rowSpan={2} className="px-4 py-3 border-r border-ink-100">Name</th>
+                          {weeks.slice(index, index + 2).map((w, weekIndex) => (
+                            <th
+                              key={w}
+                              colSpan={days.length}
+                              className={`px-4 py-2 text-center border-r border-ink-100 ${
+                                index + weekIndex === currentWeekIndex
+                                  ? "bg-brand-50 font-bold text-brand-700"
+                                  : ""
+                              }`}
+                            >
+                              {w}
+                            </th>
+                          ))}
+                          {index + 2 >= weeks.length && (
+                            <th rowSpan={2} className="px-4 py-3 text-center">Total</th>
+                          )}
+                        </tr>
+                        <tr className="border-t border-ink-100">
+                          {weeks.slice(index, index + 2).map((w, weekIndex) =>
+                            days.map((day, dayIndex) => (
+                              <th
+                                key={w + day}
+                                className={`px-2 py-1 text-center text-xs font-semibold ${
+                                  dayIndex === currentDayIndex &&
+                                  index + weekIndex === currentWeekIndex
+                                    ? "bg-amber-100 text-amber-900"
+                                    : ""
+                                }`}
+                              >
+                                {day.charAt(0)}
+                              </th>
+                            ))
+                          )}
+                        </tr>
+                      </thead>
+                      {loading ? (
+                        <tbody>
+                          <tr>
+                            <td colSpan={3 + days.length * 2 + 1} className="px-5 py-10 text-center text-ink-400">
+                              Loading student register...
                             </td>
-                          ))
-                        )}
-                        {index + 2 >= weeks.length && (
-                          <td>{calculateTotal(student.id)}</td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </tr>
+                        </tbody>
+                      ) : (
+                        <tbody className="divide-y divide-ink-100">
+                          {students.map((student, studentIndex) => (
+                            <tr key={student.id} className="hover:bg-ink-50/60">
+                              <td className="px-4 py-3 text-ink-500 border-r border-ink-100">{studentIndex + 1}</td>
+                              <td className="px-4 py-3 font-medium text-ink-900 border-r border-ink-100">{student.surname}</td>
+                              <td className="px-4 py-3 font-medium text-ink-900 border-r border-ink-100">{student.name}</td>
+                              {weeks.slice(index, index + 2).map((w) =>
+                                days.map((day) => (
+                                  <td key={student.id + w + day} className="px-2 py-2 text-center border-r border-ink-100">
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        attendance[student.id]?.[w]?.[day] || false
+                                      }
+                                      onChange={() => handleCheck(student, w, day)}
+                                      className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                                    />
+                                  </td>
+                                ))
+                              )}
+                              {index + 2 >= weeks.length && (
+                                <td className="px-4 py-3 text-center font-bold text-brand-700">
+                                  {calculateTotal(student.id)}
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                          {!students.length && (
+                            <tr>
+                              <td colSpan={3 + days.length * 2 + 1} className="px-5 py-10 text-center text-ink-400">
+                                No students found for the selected class.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      )}
+                    </table>
+                  </CardBody>
+                </Card>
               );
             }
             return acc;
           }, [])}
+
+          <div className="flex justify-end pt-4">
+            <Button
+              disabled={saving || loading}
+              onClick={updateAttendance}
+              icon={Save}
+              className="w-full md:w-auto"
+            >
+              {saving ? "Updating..." : "Update Attendance"}
+            </Button>
+          </div>
         </div>
+      ) : (
+        <Card className="p-8 text-center text-ink-500">
+          <CalendarCheck className="mx-auto mb-3 h-10 w-10 text-ink-300" />
+          <p className="font-medium text-ink-700">Please select Class, Term, and Academic Year</p>
+          <p className="text-xs text-ink-400 mt-1">Select all filters above to load the attendance register.</p>
+        </Card>
       )}
-      <div className={styles.buttonContainer}>
-        <button
-          className={loading ? styles.disabled : ""}
-          disabled={loading}
-          onClick={updateAttendance}
-        >
-          {loading ? "Updating..." : "Update Attendance"}
-        </button>
-      </div>
     </div>
   );
 };
 
 export default AttendanceRegister;
+

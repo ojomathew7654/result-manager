@@ -65,7 +65,7 @@ const Login = () => {
   return (
     <AuthCard eyebrow="Staff & admin" title="Welcome back" subtitle="Sign in to manage results, classes and students.">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Username" htmlFor="username" required>
+        <Field label="Username" htmlFor="username" className="text-white" required>
           <Input
             id="username"
             name="username"
@@ -78,7 +78,7 @@ const Login = () => {
           />
         </Field>
 
-        <Field label="Password" htmlFor="password" required>
+        <Field label="Password" htmlFor="password" className="text-white" required>
           <div className="relative">
             <Input
               id="password"
