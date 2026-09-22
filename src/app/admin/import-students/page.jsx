@@ -4,16 +4,15 @@ import React, { useState } from "react";
 import FileInput from "@/components/excel/FileInput";
 import ReadExcel from "@/components/excel/ReadExcel";
 import axios from "axios";
-import { FileSpreadsheet, Upload, Save, UserCheck, AlertCircle, Info } from "lucide-react";
+import { Save, Info } from "lucide-react";
 
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
-import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
-import Spinner from "@/components/Spinner/Spinner";
+import { useSonner } from "@/lib/useSonner";
 
 const ImportStudents = () => {
+  const { customSonner } = useSonner();
   const [studentData, setStudentData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -66,10 +65,16 @@ const ImportStudents = () => {
           successCount++;
         }
       }
-      alert(`Import complete! Processed ${studentData.length} records.`);
+      customSonner({
+        type: "success",
+        text: `Import complete! Processed ${studentData.length} records (${successCount} added).`,
+      });
     } catch (error) {
       console.error("Error saving student data:", error);
-      alert("An error occurred while saving student records. Please check the console.");
+      customSonner({
+        type: "error",
+        text: "An error occurred while saving student records. Please check console.",
+      });
     } finally {
       setLoading(false);
     }

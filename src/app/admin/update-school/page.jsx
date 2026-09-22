@@ -11,6 +11,8 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
+import { useSonner } from "@/lib/useSonner";
+
 
 const UpdateSchool = () => {
   const defaultTerms = [
@@ -54,6 +56,7 @@ const UpdateSchool = () => {
   });
 
   const { data: session, status: sessionStatus } = useSession();
+    const { customSonner } = useSonner();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -185,7 +188,10 @@ const UpdateSchool = () => {
         `/api/school/${session.schoolId}`,
         updatedData,
       );
-      alert(data.message);
+      customSonner({
+        type: "success",
+        text: data.message,
+      });
     } catch (err) {
       console.log(err.message);
     } finally {

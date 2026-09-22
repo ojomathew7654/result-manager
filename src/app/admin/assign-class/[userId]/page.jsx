@@ -11,8 +11,10 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Spinner from "@/components/Spinner/Spinner";
+import { useSonner } from "@/lib/useSonner";
 
 const EditUser = ({ params }) => {
+  const { customSonner } = useSonner();
   const { userId } = params;
   const [user, setUser] = useState(null);
   const [selectedSubjects, setSelectedSubjects] = useState([]);
@@ -83,9 +85,9 @@ const EditUser = ({ params }) => {
       const { data } = await axios.patch(`/api/teacher/addclass/${userId}`, {
         classesToAdd: selectedClasses,
       });
-      alert(data.message || "Classes updated successfully.");
+      customSonner({ type: "success", text: data.message || "Classes updated successfully." });
     } catch (err) {
-      alert("Error Adding Class");
+      customSonner({ type: "error", text: "Error Adding Class" });
       console.error(err);
     } finally {
       setLoadingClass(false);
@@ -98,9 +100,9 @@ const EditUser = ({ params }) => {
       const { data } = await axios.patch(`/api/teacher/addsubject/${userId}`, {
         subjectsToAdd: selectedSubjects,
       });
-      alert(data.message || "Subjects updated successfully.");
+      customSonner({ type: "success", text: data.message || "Subjects updated successfully." });
     } catch (err) {
-      alert("Error Adding Subject");
+      customSonner({ type: "error", text: "Error Adding Subject" });
       console.error(err);
     } finally {
       setLoadingSubject(false);
@@ -113,9 +115,9 @@ const EditUser = ({ params }) => {
       const { data } = await axios.put(`/api/teacher/addclass/${userId}`, {
         classesToAdd: teacherClasses,
       });
-      alert(data.message || "Attendance permissions updated successfully.");
+      customSonner({ type: "success", text: data.message || "Attendance permissions updated successfully." });
     } catch (err) {
-      alert("Error Adding Classes");
+      customSonner({ type: "error", text: "Error Adding Classes" });
       console.error(err);
     } finally {
       setLoadingAttendance(false);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import axios from "axios";
-import { UserPlus, User, GraduationCap, Key, Hash, Calendar, Layers } from "lucide-react";
+import { UserPlus, User, GraduationCap, Key } from "lucide-react";
 
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
@@ -13,10 +13,12 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
+import { useSonner } from "@/lib/useSonner";
 
 const yearsArray = ["2025/2026"];
 
 const RegisterStudents = () => {
+  const { customSonner } = useSonner();
   const [loading, setLoading] = useState(false);
   const [schoolClasses, setSchoolClasses] = useState([]);
   const { data: session, status: sessionStatus } = useSession();
@@ -106,16 +108,17 @@ const RegisterStudents = () => {
     try {
       const { data } = await axios.post("/api/student/create", sanitizedValues);
       console.log(data);
-      alert(data.message);
 
       if (data.status === 409) {
-        alert(data.message);
+        customSonner({ type: "error", text: data.message });
         return;
       }
-      setLoading(false);
+
+      customSonner({ type: "success", text: data.message });
       setValues(initialValues);
     } catch (error) {
       console.error("Error occurred:", error);
+      customSonner({ type: "error", text: "An error occurred while registering student." });
     } finally {
       setLoading(false);
     }

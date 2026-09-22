@@ -13,8 +13,10 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
+import { useSonner } from "@/lib/useSonner";
 
 const NewSubject = () => {
+  const { customSonner } = useSonner();
   const [selectedClass, setSelectedClass] = useState("");
   const [newSubject, setNewSubject] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -71,7 +73,7 @@ const NewSubject = () => {
   const saveEditedSubject = async () => {
     const trimmedEditedSubjectName = editedSubjectName.trim();
     if (!trimmedEditedSubjectName) {
-      alert("Please enter a valid subject name.");
+      customSonner({ type: "error", text: "Please enter a valid subject name." });
       return;
     }
     setSaveEditLoading(true);
@@ -82,13 +84,13 @@ const NewSubject = () => {
       const { data } = await axios.patch(`/api/school/${session.schoolId}`, {
         subjects: updatedSubjects,
       });
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
       setSchoolSubjects(updatedSubjects);
       setEditingSubject(null);
       setEditedSubjectName("");
     } catch (err) {
       console.log(err);
-      alert("Error updating subject name.");
+      customSonner({ type: "error", text: "Error updating subject name." });
     } finally {
       setSaveEditLoading(false);
     }
@@ -106,14 +108,14 @@ const NewSubject = () => {
     e.preventDefault();
     const trimmedNewSubject = newSubject.trim();
     if (!trimmedNewSubject) {
-      alert("Please enter a valid subject name.");
+      customSonner({ type: "error", text: "Please enter a valid subject name." });
       return;
     }
     const subjectExists = schoolSubjects.some(
       (subject) => subject.toLowerCase() === trimmedNewSubject.toLowerCase()
     );
     if (subjectExists) {
-      alert("Subject already exists.");
+      customSonner({ type: "error", text: "Subject already exists." });
       return;
     }
     setCreateLoading(true);
@@ -122,12 +124,12 @@ const NewSubject = () => {
       const { data } = await axios.patch(`/api/school/${session.schoolId}`, {
         subjects: updatedSubjects,
       });
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
       setSchoolSubjects(updatedSubjects);
       setNewSubject("");
     } catch (err) {
       console.log(err);
-      alert("Error creating subject.");
+      customSonner({ type: "error", text: "Error creating subject." });
     } finally {
       setCreateLoading(false);
     }
@@ -135,7 +137,7 @@ const NewSubject = () => {
 
   const addSubject = async () => {
     if (!academicYear || !selectedClass || !selectedSubject) {
-      alert("Please select academic year, Class, and Subject.");
+      customSonner({ type: "error", text: "Please select academic year, Class, and Subject." });
       return;
     }
     setAddLoading(true);
@@ -148,10 +150,10 @@ const NewSubject = () => {
         schoolId: session.schoolId,
         academicYear: academicYear,
       });
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
     } catch (error) {
       console.error("Error adding subject:", error);
-      alert("Error adding subject to class.");
+      customSonner({ type: "error", text: "Error adding subject to class." });
     } finally {
       setAddLoading(false);
     }
@@ -165,9 +167,10 @@ const NewSubject = () => {
       !selectedSubject ||
       !trimmedNewSubject
     ) {
-      alert(
-        "Please enter new subject name in 'Create New Subject' field, and select academic year, Class, and current Subject."
-      );
+      customSonner({
+        type: "error",
+        text: "Please enter new subject name in 'Create New Subject' field, and select academic year, Class, and current Subject.",
+      });
       return;
     }
     setEditLoading(true);
@@ -181,10 +184,10 @@ const NewSubject = () => {
         currentSubjectName: selectedSubject,
         newSubjectName: trimmedNewSubject,
       });
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
     } catch (error) {
       console.error("Error editing subject:", error);
-      alert("Error updating class subject.");
+      customSonner({ type: "error", text: "Error updating class subject." });
     } finally {
       setEditLoading(false);
     }
@@ -192,7 +195,7 @@ const NewSubject = () => {
 
   const removeSubject = async () => {
     if (!academicYear || !selectedClass || !selectedSubject) {
-      alert("Please select academic year, Class, and Subject.");
+      customSonner({ type: "error", text: "Please select academic year, Class, and Subject." });
       return;
     }
     setRemoveLoading(true);
@@ -207,10 +210,10 @@ const NewSubject = () => {
           academicYear: academicYear,
         },
       });
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
     } catch (error) {
       console.error("Error removing subject:", error);
-      alert("Error removing subject from class.");
+      customSonner({ type: "error", text: "Error removing subject from class." });
     } finally {
       setRemoveLoading(false);
     }
@@ -229,13 +232,13 @@ const NewSubject = () => {
           data: { schoolId: session.schoolId, subjectName },
         }
       );
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
       setSchoolSubjects(
         schoolSubjects.filter((subject) => subject !== subjectName)
       );
     } catch (err) {
       console.log(err);
-      alert("Error deleting subject.");
+      customSonner({ type: "error", text: "Error deleting subject." });
     } finally {
       setDeleteLoading(false);
     }

@@ -12,8 +12,10 @@ import Field from "@/components/ui/Field";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
+import { useSonner } from "@/lib/useSonner";
 
 const Register = () => {
+  const { customSonner } = useSonner();
   const [loading, setLoading] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
 
@@ -70,7 +72,7 @@ const Register = () => {
 
     // Ensure password and confirm password match
     if (trimmedValues.password !== trimmedValues.confirmPassword) {
-      alert("Passwords do not match");
+      customSonner({ type: "error", text: "Passwords do not match" });
       setLoading(false);
       return;
     }
@@ -83,12 +85,12 @@ const Register = () => {
         password: trimmedValues.password,
         schoolId: trimmedValues.schoolId,
       });
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
       setValues(initialValues);
       setLoading(false);
     } catch (error) {
       console.error("Error occurred:", error);
-      alert("An error occurred while creating user.");
+      customSonner({ type: "error", text: "An error occurred while creating user." });
     } finally {
       setLoading(false);
     }

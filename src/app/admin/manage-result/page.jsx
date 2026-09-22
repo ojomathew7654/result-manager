@@ -11,8 +11,10 @@ import Select from "@/components/ui/Select";
 import Field from "@/components/ui/Field";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
+import { useSonner } from "@/lib/useSonner";
 
 const Class = () => {
+  const { customSonner } = useSonner();
   const [students, setStudents] = useState([]);
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [schoolClasses, setSchoolClasses] = useState([]);
@@ -130,7 +132,7 @@ const Class = () => {
 
   const handleUpdateScores = async () => {
     if (!selectedSubject) {
-      alert("Please select a subject.");
+      customSonner({ type: "error", text: "Please select a subject." });
       return;
     }
     setUpdating(true);
@@ -149,9 +151,9 @@ const Class = () => {
         `/api/student/class/${selectedClass}`,
         { termType, records }
       );
-      alert(data.message || "Scores updated successfully.");
+      customSonner({ type: "success", text: data.message || "Scores updated successfully." });
     } catch (error) {
-      alert("Network Error. Please try again later.");
+      customSonner({ type: "error", text: "Network Error. Please try again later." });
       console.error("Failed to update scores:", error.message);
     } finally {
       setUpdating(false);
