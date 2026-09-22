@@ -6,7 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import { useReactToPrint } from "react-to-print";
 import Image from "next/image";
-import { ArrowLeft, Printer, TrendingUp, Search } from "lucide-react";
+import { ArrowLeft, Printer, TrendingUp, Search, FileText } from "lucide-react";
 
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -27,6 +27,7 @@ const StudentPerformance = () => {
   const [students, setStudents] = useState([]);
   const [school, setSchool] = useState({});
   const [levelAndVariant, setLevelAndVariant] = useState(null);
+  const [activeTab, setActiveTab] = useState("broadsheet");
   const contentToPrint = useRef(null);
 
   const handlePrint = useReactToPrint({
@@ -57,9 +58,15 @@ const StudentPerformance = () => {
     }
   }, [sessionStatus, session]);
 
-  const getTermlyPerformance = async () => {
+  const getTermlyPerformance = async (force = false) => {
     if (!academicYear || !selectedClass || !termType) {
       alert("Please select academicYear, term and Class");
+      return;
+    }
+
+    setActiveTab("broadsheet");
+
+    if (!force && students.length > 0) {
       return;
     }
 
@@ -92,11 +99,18 @@ const StudentPerformance = () => {
     }
   };
 
-  const getYeralyPerformance = async () => {
+  const getYeralyPerformance = async (force = false) => {
     if (!academicYear || !selectedClass) {
       alert("Please select academicYear and Class");
       return;
     }
+
+    setActiveTab("position");
+
+    if (!force && yearlyData.length > 0) {
+      return;
+    }
+
     setYearlyLoading(true);
     try {
       const encodedAcademicYear = encodeURIComponent(academicYear);
@@ -112,16 +126,21 @@ const StudentPerformance = () => {
     }
   };
 
-  const handleAcademicYearChange = async (event) => {
+  const handleAcademicYearChange = (event) => {
     setAcademicYear(event.target.value);
+    setStudents([]);
+    setYearlyData([]);
   };
 
-  const handleTermChange = async (event) => {
+  const handleTermChange = (event) => {
     setTermType(event.target.value);
+    setStudents([]);
   };
 
-  const handleClassChange = async (e) => {
+  const handleClassChange = (e) => {
     setSelectedClass(e.target.value);
+    setStudents([]);
+    setYearlyData([]);
   };
 
   if (sessionStatus === "loading") {
@@ -211,7 +230,7 @@ const StudentPerformance = () => {
           disabled={broadsheetLoading}
           onClick={getTermlyPerformance}
           icon={Search}
-          variant="primary"
+          variant={activeTab === "broadsheet" ? "primary" : "outline"}
         >
           {broadsheetLoading ? "Generating..." : "Get Broadsheet"}
         </Button>
@@ -219,177 +238,198 @@ const StudentPerformance = () => {
           disabled={yearlyLoading}
           onClick={getYeralyPerformance}
           icon={TrendingUp}
-          variant="outline"
+          variant={activeTab === "position" ? "primary" : "outline"}
         >
           {yearlyLoading ? "Generating..." : "Get Academic Position"}
         </Button>
       </div>
 
-      {students?.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader
-            title={`${levelAndVariant?.level || ""} ${levelAndVariant?.variant || ""} Termly Broadsheet`}
-            action={
-              <Button onClick={handlePrint} icon={Printer} variant="outline" size="sm">
-                Print Broadsheet
-              </Button>
-            }
-          />
-          <CardBody className="overflow-x-auto p-0">
-            <div ref={contentToPrint} className="p-4 bg-white">
-              <header className="mb-4 border-b border-ink-100 pb-4 text-center">
-                {school?.logo && (
-                  <div className="mb-2 flex justify-center">
-                    <Image
-                      src={school.logo}
-                      alt="logo"
-                      height={90}
-                      width={110}
-                      className="h-20 w-auto object-contain"
-                    />
-                  </div>
-                )}
-                <h3 className="font-display text-lg font-bold text-ink-900">
-                  {school?.fullName ? school.fullName.toUpperCase() : ""}
-                </h3>
-                {school.name === "CRYSTAL BRAINS SCHOOL" && (
-                  <h4 className="text-xs font-semibold text-ink-600">BRITISH AND MONTESSORI</h4>
-                )}
-                {school?.motto && (
-                  <p className="text-xs italic text-ink-500">
-                    MOTTO: {school.motto.toUpperCase()}
+      {activeTab === "broadsheet" && (
+        students?.length > 0 ? (
+          <Card className="mb-8">
+            <CardHeader
+              title={`${levelAndVariant?.level || ""} ${levelAndVariant?.variant || ""} Termly Broadsheet`}
+              action={
+                <Button onClick={handlePrint} icon={Printer} variant="outline" size="sm">
+                  Print Broadsheet
+                </Button>
+              }
+            />
+            <CardBody className="overflow-x-auto p-0">
+              <div ref={contentToPrint} className="p-4 bg-white">
+                <header className="mb-4 border-b border-ink-100 pb-4 text-center">
+                  {school?.logo && (
+                    <div className="mb-2 flex justify-center">
+                      <Image
+                        src={school.logo}
+                        alt="logo"
+                        height={90}
+                        width={110}
+                        className="h-20 w-auto object-contain"
+                      />
+                    </div>
+                  )}
+                  <h3 className="font-display text-lg font-bold text-ink-900">
+                    {school?.fullName ? school.fullName.toUpperCase() : ""}
+                  </h3>
+                  {school.name === "CRYSTAL BRAINS SCHOOL" && (
+                    <h4 className="text-xs font-semibold text-ink-600">BRITISH AND MONTESSORI</h4>
+                  )}
+                  {school?.motto && (
+                    <p className="text-xs italic text-ink-500">
+                      MOTTO: {school.motto.toUpperCase()}
+                    </p>
+                  )}
+                  <p className="mt-2 text-sm font-semibold text-brand-700">
+                    {`${levelAndVariant?.level?.toUpperCase() || ""}${
+                      levelAndVariant?.variant
+                        ? " - " + levelAndVariant.variant.toUpperCase()
+                        : ""
+                    } Broadsheet – ${termType} Term, ${academicYear || "2025/2026"} Academic Session`}
                   </p>
-                )}
-                <p className="mt-2 text-sm font-semibold text-brand-700">
-                  {`${levelAndVariant?.level?.toUpperCase() || ""}${
-                    levelAndVariant?.variant
-                      ? " - " + levelAndVariant.variant.toUpperCase()
-                      : ""
-                  } Broadsheet – ${termType} Term, ${academicYear || "2025/2026"} Academic Session`}
-                </p>
-              </header>
+                </header>
 
-              <table className="min-w-full border-collapse border border-ink-200 text-left text-xs">
-                <thead className="bg-ink-50 text-ink-700">
+                <table className="min-w-full border-collapse border border-ink-200 text-left text-xs">
+                  <thead className="bg-ink-50 text-ink-700">
+                    <tr>
+                      <th className="border border-ink-200 px-2 py-1.5 text-center">#</th>
+                      <th className="border border-ink-200 px-2 py-1.5">Surname</th>
+                      <th className="border border-ink-200 px-2 py-1.5">Name</th>
+                      {subjectKeys.map((subject) => {
+                        const trimmedSubject = subject.trim();
+                        const normalized = trimmedSubject.toLowerCase();
+                        const isMath =
+                          normalized === "mathematics" || normalized === "math";
+                        const displaySubject = isMath ? "MATH" : trimmedSubject;
+                        const subjectLines = displaySubject.split(/\s+/);
+
+                        return (
+                          <th
+                            key={subject}
+                            className="border border-ink-200 px-1 py-1.5 text-center"
+                            title={trimmedSubject}
+                          >
+                            <div className="leading-tight">
+                              {subjectLines.map((word, idx) => (
+                                <React.Fragment key={idx}>
+                                  {word.toUpperCase()}
+                                  {idx !== subjectLines.length - 1 && <br />}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          </th>
+                        );
+                      })}
+
+                      <th className="border border-ink-200 px-2 py-1.5 text-center">Total</th>
+                      <th className="border border-ink-200 px-2 py-1.5 text-center">Avg</th>
+                      <th className="border border-ink-200 px-2 py-1.5 text-center">Pos</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-ink-100">
+                    {students.map((student, index) => (
+                      <tr key={index} className="hover:bg-ink-50/50">
+                        <td className="border border-ink-200 px-2 py-1 text-center font-medium text-ink-500">
+                          <PaddedCell value={index + 1} />
+                        </td>
+                        <td className="border border-ink-200 px-2 py-1 font-medium text-ink-900">
+                          <PaddedCell value={student.surname} />
+                        </td>
+                        <td className="border border-ink-200 px-2 py-1 font-medium text-ink-900">
+                          {student.name}
+                        </td>
+
+                        {subjectKeys.map((subject) => (
+                          <td key={subject} className="border border-ink-200 px-1 py-1 text-center">
+                            <PaddedCell value={student[subject]} />
+                          </td>
+                        ))}
+
+                        <td className="border border-ink-200 px-2 py-1 text-center font-bold text-ink-900">
+                          <PaddedCell value={student.totalScore} />
+                        </td>
+                        <td className="border border-ink-200 px-2 py-1 text-center font-semibold text-brand-700">
+                          <PaddedCell
+                            value={student.average ? `${Number(student.average).toFixed(2)}%` : "-"}
+                          />
+                        </td>
+                        <td className="border border-ink-200 px-2 py-1 text-center font-bold text-emerald-600">
+                          <PaddedCell value={student.position} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardBody>
+          </Card>
+        ) : (
+          <Card className="p-8 text-center text-ink-500">
+            <FileText className="mx-auto mb-3 h-10 w-10 text-ink-300" />
+            <p className="font-medium text-ink-700">Broadsheet View</p>
+            <p className="mt-1 text-xs text-ink-400">
+              Select Academic Year, Term, and Class above, then click &quot;Get Broadsheet&quot; to generate the report.
+            </p>
+          </Card>
+        )
+      )}
+
+      {activeTab === "position" && (
+        yearlyData.length > 0 ? (
+          <Card>
+            <CardHeader title="Academic Year Position Summary" />
+            <CardBody className="overflow-x-auto p-0">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
                   <tr>
-                    <th className="border border-ink-200 px-2 py-1.5 text-center">#</th>
-                    <th className="border border-ink-200 px-2 py-1.5">Surname</th>
-                    <th className="border border-ink-200 px-2 py-1.5">Name</th>
-                    {subjectKeys.map((subject) => {
-                      const trimmedSubject = subject.trim();
-                      const normalized = trimmedSubject.toLowerCase();
-                      const isMath =
-                        normalized === "mathematics" || normalized === "math";
-                      const displaySubject = isMath ? "MATH" : trimmedSubject;
-                      const subjectLines = displaySubject.split(/\s+/);
-
-                      return (
-                        <th
-                          key={subject}
-                          className="border border-ink-200 px-1 py-1.5 text-center"
-                          title={trimmedSubject}
-                        >
-                          <div className="leading-tight">
-                            {subjectLines.map((word, idx) => (
-                              <React.Fragment key={idx}>
-                                {word.toUpperCase()}
-                                {idx !== subjectLines.length - 1 && <br />}
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        </th>
-                      );
-                    })}
-
-                    <th className="border border-ink-200 px-2 py-1.5 text-center">Total</th>
-                    <th className="border border-ink-200 px-2 py-1.5 text-center">Avg</th>
-                    <th className="border border-ink-200 px-2 py-1.5 text-center">Pos</th>
+                    <th className="px-4 py-3">No</th>
+                    <th className="px-4 py-3">Level</th>
+                    <th className="px-4 py-3">Surname</th>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3 text-center">First Term</th>
+                    <th className="px-4 py-3 text-center">Second Term</th>
+                    <th className="px-4 py-3 text-center">Third Term</th>
+                    <th className="px-4 py-3 text-center">Total Score</th>
+                    <th className="px-4 py-3 text-center">Average</th>
+                    <th className="px-4 py-3 text-center">Position</th>
                   </tr>
                 </thead>
-
                 <tbody className="divide-y divide-ink-100">
-                  {students.map((student, index) => (
-                    <tr key={index} className="hover:bg-ink-50/50">
-                      <td className="border border-ink-200 px-2 py-1 text-center font-medium text-ink-500">
-                        <PaddedCell value={index + 1} />
+                  {yearlyData.map((student, index) => (
+                    <tr key={index} className="hover:bg-ink-50/60">
+                      <td className="px-4 py-3 text-ink-500">{index + 1}</td>
+                      <td className="px-4 py-3 text-ink-700 font-medium">{student.level?.toUpperCase() || "—"}</td>
+                      <td className="px-4 py-3 font-medium text-ink-900">{student.surname}</td>
+                      <td className="px-4 py-3 font-medium text-ink-900">{student.name}</td>
+                      <td className="px-4 py-3 text-center text-ink-700">{student.termlyScores?.FIRST ?? "-"}</td>
+                      <td className="px-4 py-3 text-center text-ink-700">{student.termlyScores?.SECOND ?? "-"}</td>
+                      <td className="px-4 py-3 text-center text-ink-700">{student.termlyScores?.THIRD ?? "-"}</td>
+                      <td className="px-4 py-3 text-center font-bold text-ink-900">{student.termlyScores?.TOTAL ?? "-"}</td>
+                      <td className="px-4 py-3 text-center font-semibold text-brand-700">
+                        {student.average ? `${Number(student.average).toFixed(2)}%` : "-"}
                       </td>
-                      <td className="border border-ink-200 px-2 py-1 font-medium text-ink-900">
-                        <PaddedCell value={student.surname} />
-                      </td>
-                      <td className="border border-ink-200 px-2 py-1 font-medium text-ink-900">
-                        {student.name}
-                      </td>
-
-                      {subjectKeys.map((subject) => (
-                        <td key={subject} className="border border-ink-200 px-1 py-1 text-center">
-                          <PaddedCell value={student[subject]} />
-                        </td>
-                      ))}
-
-                      <td className="border border-ink-200 px-2 py-1 text-center font-bold text-ink-900">
-                        <PaddedCell value={student.totalScore} />
-                      </td>
-                      <td className="border border-ink-200 px-2 py-1 text-center font-semibold text-brand-700">
-                        <PaddedCell
-                          value={student.average ? `${Number(student.average).toFixed(2)}%` : "-"}
-                        />
-                      </td>
-                      <td className="border border-ink-200 px-2 py-1 text-center font-bold text-emerald-600">
-                        <PaddedCell value={student.position} />
-                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-emerald-600">{student.position}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      {yearlyData.length > 0 && (
-        <Card>
-          <CardHeader title="Academic Year Position Summary" />
-          <CardBody className="overflow-x-auto p-0">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
-                <tr>
-                  <th className="px-4 py-3">No</th>
-                  <th className="px-4 py-3">Level</th>
-                  <th className="px-4 py-3">Surname</th>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3 text-center">First Term</th>
-                  <th className="px-4 py-3 text-center">Second Term</th>
-                  <th className="px-4 py-3 text-center">Third Term</th>
-                  <th className="px-4 py-3 text-center">Total Score</th>
-                  <th className="px-4 py-3 text-center">Average</th>
-                  <th className="px-4 py-3 text-center">Position</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink-100">
-                {yearlyData.map((student, index) => (
-                  <tr key={index} className="hover:bg-ink-50/60">
-                    <td className="px-4 py-3 text-ink-500">{index + 1}</td>
-                    <td className="px-4 py-3 text-ink-700 font-medium">{student.level?.toUpperCase() || "—"}</td>
-                    <td className="px-4 py-3 font-medium text-ink-900">{student.surname}</td>
-                    <td className="px-4 py-3 font-medium text-ink-900">{student.name}</td>
-                    <td className="px-4 py-3 text-center text-ink-700">{student.termlyScores?.FIRST ?? "-"}</td>
-                    <td className="px-4 py-3 text-center text-ink-700">{student.termlyScores?.SECOND ?? "-"}</td>
-                    <td className="px-4 py-3 text-center text-ink-700">{student.termlyScores?.THIRD ?? "-"}</td>
-                    <td className="px-4 py-3 text-center font-bold text-ink-900">{student.termlyScores?.TOTAL ?? "-"}</td>
-                    <td className="px-4 py-3 text-center font-semibold text-brand-700">
-                      {student.average ? `${Number(student.average).toFixed(2)}%` : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-center font-bold text-emerald-600">{student.position}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        ) : (
+          <Card className="p-8 text-center text-ink-500">
+            <TrendingUp className="mx-auto mb-3 h-10 w-10 text-ink-300" />
+            <p className="font-medium text-ink-700">Academic Position View</p>
+            <p className="mt-1 text-xs text-ink-400">
+              Select Academic Year and Class above, then click &quot;Get Academic Position&quot; to view yearly rankings.
+            </p>
+          </Card>
+        )
       )}
     </div>
   );
 };
 
 export default StudentPerformance;
+
 
