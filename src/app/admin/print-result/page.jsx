@@ -12,7 +12,6 @@ import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
 
 import UkpSecondary from "@/components/report/upksecondary/page";
-import UkpJss from "@/components/report/upkjsclass/page";
 import SolidRock from "@/components/report/solidrock/page";
 import JayRose from "@/components/report/jayrose/page";
 import NewCambridge from "@/components/report/newcambridge/page";
