@@ -1,30 +1,33 @@
 "use client";
-import Class from "@/components/Class";
-import "./class-report.css";
+
 import { redirect } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Spinner from "@/components/Spinner/Spinner";
+import PageHeader from "@/components/ui/PageHeader";
+import Class from "@/components/Class";
 
 const Page = () => {
-  const { data: session, status: sessionStatus } = useSession();
-
-  if (sessionStatus == "loading")
-    return (
-      <h1 className="waitH1">
-        <Spinner /> Please wait...
-      </h1>
-    );
-  if (sessionStatus !== "authenticated") redirect("/");
+  const { status: sessionStatus } = useSession();
 
   if (sessionStatus === "loading") {
-    return "Loading...";
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spinner />
+        <p className="text-sm font-medium text-ink-400">Loading result manager...</p>
+      </div>
+    );
+  }
+
+  if (sessionStatus !== "authenticated") {
+    redirect("/");
   }
 
   return (
-    <div className="check-result">
-      <h2>This is where to update the student score.</h2>
-      <h3>Please select academicYear, term, class, then subject</h3>
-      <p>Only your class and your subject will be visible to you.</p>
+    <div className="space-y-6">
+      <PageHeader
+        title="Score Entry & Management"
+        subtitle="Select academic year, term, class, and subject to record or update student scores."
+      />
       <Class />
     </div>
   );

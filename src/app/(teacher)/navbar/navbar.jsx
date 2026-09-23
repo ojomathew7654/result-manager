@@ -1,218 +1,238 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import styles from "./navbar.module.css";
-import {
-  FaCaretDown,
-  FaCaretUp,
-  FaPowerOff,
-  FaRegEdit,
-  FaTimes,
-} from "react-icons/fa";
-import { IoCloudUploadOutline, IoMenuSharp } from "react-icons/io5";
-import { RiRegisteredFill } from "react-icons/ri";
-import { MdAddTask, MdOutlinePreview } from "react-icons/md";
-import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import axios from "axios";
-import { SiLevelsdotfyi } from "react-icons/si";
+import { signOut, useSession } from "next-auth/react";
+import clsx from "clsx";
+import {
+  FileSpreadsheet,
+  CalendarCheck,
+  MessageSquare,
+  BookOpen,
+  TrendingUp,
+  Eye,
+  LogOut,
+  Menu,
+  X,
+  GraduationCap,
+  ChevronDown,
+} from "lucide-react";
+
+const navItems = [
+  { href: "/check-result", label: "Result Entry", icon: FileSpreadsheet },
+  { href: "/attendance", label: "Attendance", icon: CalendarCheck },
+  { href: "/comment", label: "Comments", icon: MessageSquare },
+  { href: "/task", label: "Tasks", icon: BookOpen },
+  { href: "/student-performance", label: "Performance", icon: TrendingUp },
+  { href: "/review", label: "Review Result", icon: Eye },
+];
 
 const Navbar = () => {
-  const [open, setOpen] = useState(false);
-  const router = useRouter();
-  const [school, setSchool] = useState([]);
-  const pathname = usePathname();
-
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { data: session, status: sessionStatus } = useSession();
-  const logOut = async () => {
-    if (!window.confirm("Are you sure you want to log out?")) return;
-    await signOut({ callbackUrl: "/" });
-  };
+  const [school, setSchool] = useState({});
+  const pathname = usePathname();
+  const { data: session } = useSession();
 
-  const handleNavigation = (event, path) => {
-    event.preventDefault();
-    router.push(path);
-    setOpen(false);
-  };
-
-  const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
   useEffect(() => {
     const fetchSchoolData = async () => {
-      if (!session) return;
+      if (!session?.schoolId) return;
       try {
         const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        setSchool(data);
+        setSchool(data || {});
       } catch (error) {
         console.error("Error fetching school data:", error);
       }
     };
     fetchSchoolData();
   }, [session]);
+
+  const logOut = async () => {
+    if (!window.confirm("Are you sure you want to log out?")) return;
+    await signOut({ callbackUrl: "/" });
+  };
+
   const hideNavbar = pathname.includes("/print/");
+  if (hideNavbar) return null;
+
+  const schoolDisplayName = school.name || school.fullName || "School Portal";
+  const currentYear = new Date().getFullYear();
 
   return (
-    <>
-      {!hideNavbar && (
-        <nav className={styles.navbar}>
-          {open && (
-            <div
-              className={styles.sidebarOverlay}
-              onClick={() => setOpen(false)}
-            ></div>
-          )}
-
-          <div className={styles.logo}>
-            <div className={styles.imageContainer}>
+    <header className="sticky top-0 z-40 w-full bg-ink-900 border-b border-ink-800 text-white shadow-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Left: School Logo & Title */}
+        <div className="flex items-center gap-3">
+          {school?.logo ? (
+            <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-ink-700 bg-ink-800 shrink-0">
               <Image
-                src={school.logo || "/img/logo.jpeg"}
-                alt="img2"
-                height={60}
-                width={70}
+                src={school.logo}
+                alt={`${schoolDisplayName} logo`}
+                fill
+                className="object-cover"
               />
             </div>
-            <span> {school.name?.toUpperCase()}</span>
-          </div>
-
-          {/* Sidebar menu */}
-          <div className={`${styles.hamburger} ${open ? styles.visible : ""}`}>
-            <div className={styles.menuGroup}>
-              <div className={styles.cancelBtn} onClick={() => setOpen(false)}>
-                <FaTimes />
-              </div>
-              <li onClick={(event) => handleNavigation(event, "/check-result")}>
-                <Link
-                  href="/check-result"
-                  className={`${styles.nav} ${
-                    pathname === "/check-result" ? styles.active : ""
-                  }`}
-                >
-                  <IoCloudUploadOutline className={styles.icon} />
-                  <span>Result</span>
-                </Link>
-              </li>
-              <li onClick={(event) => handleNavigation(event, "/attendance")}>
-                <Link
-                  href="/attendance"
-                  className={`${styles.nav} ${
-                    pathname === "/attendance" ? styles.active : ""
-                  }`}
-                >
-                  <RiRegisteredFill className={styles.icon} />
-                  <span>Attendance</span>
-                </Link>
-              </li>
-              <li onClick={(event) => handleNavigation(event, "/comment")}>
-                <Link
-                  href="/comment"
-                  className={`${styles.nav} ${
-                    pathname === "/comment" ? styles.active : ""
-                  }`}
-                >
-                  <FaRegEdit className={styles.icon} />
-                  <span>Comment</span>
-                </Link>
-              </li>
-              <li onClick={(event) => handleNavigation(event, "/task")}>
-                <Link
-                  href="/task"
-                  className={`${styles.nav} ${
-                    pathname === "/task" ? styles.active : ""
-                  }`}
-                >
-                  <MdAddTask className={styles.icon} />
-                  <span>Task</span>
-                </Link>
-              </li>
-              <li
-                onClick={(event) =>
-                  handleNavigation(event, "/student-performance")
-                }
-              >
-                <Link
-                  href="/student-performance"
-                  className={`${styles.nav} ${
-                    pathname === "/student-performance" ? styles.active : ""
-                  }`}
-                >
-                  <SiLevelsdotfyi className={styles.icon} />
-                  <span>Student Performance</span>
-                </Link>
-              </li>
-              <li onClick={(event) => handleNavigation(event, "/review")}>
-                <Link
-                  href="/review"
-                  className={`${styles.nav} ${
-                    pathname === "/review" ? styles.active : ""
-                  }`}
-                >
-                  <MdOutlinePreview className={styles.icon} />
-                  <span>Review Result</span>
-                </Link>
-              </li>
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400 text-ink-900 shrink-0">
+              <GraduationCap size={20} strokeWidth={2.25} />
             </div>
+          )}
+          <div className="min-w-0">
+            <p className="font-display text-sm font-semibold leading-tight text-white truncate uppercase max-w-[180px] sm:max-w-xs">
+              {schoolDisplayName}
+            </p>
+            <p className="text-xs text-ink-300">Teacher Portal</p>
           </div>
+        </div>
 
-          <div className={styles.middleBar}>
-            <div className={styles.adminContainer}>
-              <div className={styles.desktop}>
-                <span>TEACHER: {session?.name.toUpperCase()} </span>
-                <div className={styles.imageContainer}>
-                  <Image
-                    className={styles.img}
-                    src={session?.imageUrl || "/img/admin.jpg"}
-                    alt="img2"
-                    height={60}
-                    width={60}
-                  />
-                  <button onClick={logOut} className={styles.logoutButton}>
-                    <FaPowerOff className={styles.icon} />
-                    <span>Log Out</span>
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={toggleDropdown}
-                className={styles.dropdownButton}
-              >
-                {dropdownOpen ? (
-                  <FaCaretUp className={styles.icon} fontSize={35} />
-                ) : (
-                  <FaCaretDown className={styles.icon} fontSize={35} />
+        {/* Center: Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                  isActive
+                    ? "bg-brand-600 text-white shadow-soft font-semibold"
+                    : "text-ink-200 hover:bg-ink-800 hover:text-white"
                 )}
-              </button>
-              {dropdownOpen && (
-                <div className={styles.dropdownMenu}>
-                  <div className={styles.dropdownItem}>
-                    <Image
-                      className={styles.img}
-                      src={session?.imageUrl || "/img/admin.jpg"}
-                      alt="img2"
-                      height={60}
-                      width={60}
-                    />
-                    <span>{session?.name.toUpperCase()}</span>
-                  </div>
-                  <button onClick={logOut} className={styles.logoutButton}>
-                    <FaPowerOff className={styles.icon} />
-                    <span>Log Out</span>
-                  </button>
+              >
+                <Icon size={15} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Right: User Profile & Actions */}
+        <div className="hidden md:flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2.5 rounded-lg border border-ink-700 bg-ink-800/80 px-3 py-1.5 text-xs text-white hover:bg-ink-800 transition-colors"
+            >
+              {session?.imageUrl ? (
+                <div className="relative h-6 w-6 overflow-hidden rounded-full border border-ink-600">
+                  <Image
+                    src={session.imageUrl}
+                    alt={session.name || "Teacher"}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white uppercase">
+                  {session?.name ? session.name.charAt(0) : "T"}
                 </div>
               )}
-            </div>
+              <span className="font-medium max-w-[120px] truncate uppercase">
+                {session?.name || "Teacher"}
+              </span>
+              <ChevronDown size={14} className="text-ink-400" />
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-ink-700 bg-ink-900 p-2 shadow-card z-50">
+                <div className="px-3 py-2 border-b border-ink-800">
+                  <p className="text-xs font-semibold text-white uppercase truncate">
+                    {session?.name}
+                  </p>
+                  <p className="text-[10px] text-ink-400">Teacher Account</p>
+                </div>
+                <button
+                  onClick={logOut}
+                  className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+                >
+                  <LogOut size={14} />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            )}
           </div>
-          {/* Right column with menu button */}
-          <div className={styles.rightColumn}>
-            <div className={styles.menuBtn} onClick={() => setOpen(true)}>
-              <IoMenuSharp className={styles.icon} />
+        </div>
+
+        {/* Mobile Menu Toggle */}
+        <div className="flex items-center gap-2 md:hidden">
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="rounded-lg p-2 text-ink-200 hover:bg-ink-800 hover:text-white"
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Drawer Overlay */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-ink-800 bg-ink-900 px-4 pt-3 pb-6 space-y-3">
+          <div className="flex items-center justify-between pb-3 border-b border-ink-800 px-1">
+            <div className="flex items-center gap-2.5">
+              {session?.imageUrl ? (
+                <div className="relative h-8 w-8 overflow-hidden rounded-full border border-ink-600">
+                  <Image
+                    src={session.imageUrl}
+                    alt={session.name || "Teacher"}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white uppercase">
+                  {session?.name ? session.name.charAt(0) : "T"}
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-bold text-white uppercase truncate">
+                  {session?.name}
+                </p>
+                <p className="text-[10px] text-amber-400 font-medium">Teacher</p>
+              </div>
             </div>
+            <button
+              onClick={logOut}
+              className="flex items-center gap-1 text-xs font-medium text-rose-400 bg-rose-500/10 px-2.5 py-1.5 rounded-lg"
+            >
+              <LogOut size={13} />
+              <span>Log Out</span>
+            </button>
           </div>
-        </nav>
+
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={clsx(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-brand-600 text-white font-semibold"
+                      : "text-ink-200 hover:bg-ink-800 hover:text-white"
+                  )}
+                >
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="pt-3 border-t border-ink-800 text-[11px] text-ink-400 text-center">
+            Made by AS Code Elevate &copy; {currentYear}
+          </div>
+        </div>
       )}
-    </>
+    </header>
   );
 };
 
