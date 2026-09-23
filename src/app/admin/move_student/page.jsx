@@ -3,10 +3,18 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useSession } from "next-auth/react";
+import { Users, ArrowRight, UserCheck, RefreshCw, Layers } from "lucide-react";
+
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
-import styles from "./moveStudents.module.css";
+import { useSonner } from "@/lib/useSonner";
 
 const MoveStudents = () => {
+  const { customSonner } = useSonner();
   const { data: session } = useSession();
   const [levels, setLevels] = useState([]);
   const [variants, setVariants] = useState([]);
@@ -22,230 +30,261 @@ const MoveStudents = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [promoting, setPromoting] = useState(false);
-  const [message, setMessage] = useState("");
 
-  // === FETCH SCHOOL LEVELS & VARIANTS ===
   useEffect(() => {
-    const fetchSchool = async () => {
+    const fetchSchoolData = async () => {
       try {
         const { data } = await axios.get(`/api/school/${session.schoolId}`);
-
-        const extractedLevels = [
-          ...new Set(data.classes.map((cls) => cls.split("-")[0])),
-        ];
-
-        const extractedVariants = [
-          ...new Set(
-            data.classes
-              .map((cls) => cls.split("-")[1] || "")
-              .filter((variant) => variant)
-          ),
-        ];
-
-        setLevels(extractedLevels);
-        setVariants(extractedVariants);
+        setLevels(data.classes || []);
+        setVariants(data.variants || []);
       } catch (err) {
-        console.error("Error fetching school:", err);
-        setMessage("Failed to load school data.");
+        console.error("Error fetching school data:", err);
       }
     };
 
-    if (session?.schoolId) fetchSchool();
+    if (session?.schoolId) {
+      fetchSchoolData();
+    }
   }, [session]);
 
-  // === FETCH STUDENTS ===
   const fetchStudents = async () => {
     if (!academicYear || !selectedLevel) {
-      setMessage("Please select level and academic year first.");
+      customSonner({ type: "error", text: "Please select both Academic Year and Level." });
       return;
     }
 
     setLoading(true);
-    setMessage("");
 
     try {
-      const encodedAcademicYear = encodeURIComponent(academicYear);
-      const variantParam = variant || "";
+      const res = await axios.get("/api/move_students", {
+        params: {
+          schoolId: session.schoolId,
+          level: selectedLevel,
+          variant,
+          academicYear,
+        },
+      });
 
-      const { data } = await axios.get(
-        `/api/move_students/${session.schoolId}-${selectedLevel}-${variantParam}-${encodedAcademicYear}`
-      );
-
-      setStudents(data);
-      setMessage(
-        data.length > 0
-          ? `${data.length} students found for ${selectedLevel} ${
-              variant || ""
-            }`
-          : "No students found for the selected level and variant."
-      );
+      setStudents(res.data.students || []);
+      if (res.data.students?.length === 0) {
+        customSonner({ type: "info", text: "No students found for the selected criteria." });
+      }
     } catch (err) {
       console.error("Fetch students error:", err);
-      setMessage("Error fetching students.");
+      customSonner({
+        type: "error",
+        text: err.response?.data?.error || "Failed to fetch students.",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // === PROMOTE STUDENTS ===
   const promoteStudents = async () => {
-    if (!nextLevel || !nextAcademicYear) {
-      setMessage("Please select next level and academic year.");
+    if (!nextAcademicYear || !nextLevel) {
+      customSonner({
+        type: "error",
+        text: "Please select both Next Academic Year and Next Level.",
+      });
       return;
     }
 
-    if (students.length === 0) {
-      setMessage("No students to promote.");
-      return;
-    }
-
-    // Prevent same level/year promotion
     if (academicYear === nextAcademicYear && selectedLevel === nextLevel) {
-      setMessage(
-        "Next level and academic year must be different from the current ones."
-      );
+      customSonner({
+        type: "error",
+        text: "Next level and academic year must be different from current ones.",
+      });
       return;
     }
 
     setPromoting(true);
-    setMessage("");
 
     try {
       const body = {
         schoolId: session.schoolId,
         level: selectedLevel,
         variant,
-        academicYear, // current academic year
-        nextLevel, // new level
-        nextAcademicYear, // new academic year ✅
+        academicYear,
+        nextLevel,
+        nextAcademicYear,
       };
 
       const res = await axios.put("/api/move_students", body);
-      setMessage(res.data.message || "Students promoted successfully.");
+      customSonner({
+        type: "success",
+        text: res.data.message || "Students promoted successfully.",
+      });
       setStudents([]);
     } catch (err) {
       console.error("Promote students error:", err);
-      setMessage(
-        err.response?.data?.error || "Error occurred while promoting students."
-      );
+      customSonner({
+        type: "error",
+        text: err.response?.data?.error || "Error occurred while promoting students.",
+      });
     } finally {
       setPromoting(false);
     }
   };
 
-  // === RENDER ===
   return (
-    <div className={styles.container}>
-      <h1 className={styles.title}>Move Students to Next Level</h1>
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <PageHeader
+        title="Move Students to Next Level"
+        subtitle="Batch promote or transition student records to a new level and academic year."
+      />
 
-      {/* === FETCH STUDENTS SECTION === */}
-      <div className={styles.filters}>
-        <select
-          value={academicYear}
-          onChange={(e) => setAcademicYear(e.target.value)}
-        >
-          <option value="">Select Academic Year</option>
-          <option value="2024/2025">2024/2025</option>
-          <option value="2025/2026">2025/2026</option>
-        </select>
+      {/* Card 1: Selection Filters */}
+      <Card>
+        <CardHeader
+          title="Current Student Placement"
+          subtitle="Filter current class roster to promote"
+        />
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field label="Academic Year" required>
+              <Select
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+              >
+                <option value="">Select Academic Year</option>
+                <option value="2024/2025">2024/2025</option>
+                <option value="2025/2026">2025/2026</option>
+              </Select>
+            </Field>
 
-        <select
-          value={selectedLevel}
-          onChange={(e) => setSelectedLevel(e.target.value)}
-        >
-          <option value="">Select Level</option>
-          {levels.map((lvl) => (
-            <option key={lvl} value={lvl}>
-              {lvl.toUpperCase()}
-            </option>
-          ))}
-        </select>
+            <Field label="Current Level" required>
+              <Select
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+              >
+                <option value="">Select Level</option>
+                {levels.map((lvl) => (
+                  <option key={lvl} value={lvl}>
+                    {lvl.toUpperCase()}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-        <select value={variant} onChange={(e) => setVariant(e.target.value)}>
-          <option value="">Select Variant (optional)</option>
-          {variants.map((v) => (
-            <option key={v} value={v}>
-              {v.toUpperCase()}
-            </option>
-          ))}
-        </select>
+            <Field label="Variant (Optional)">
+              <Select value={variant} onChange={(e) => setVariant(e.target.value)}>
+                <option value="">Select Variant</option>
+                {variants.map((v) => (
+                  <option key={v} value={v}>
+                    {v.toUpperCase()}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
 
-        <button onClick={fetchStudents} disabled={loading || promoting}>
-          {loading ? "Loading..." : "Get Students"}
-        </button>
-      </div>
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={fetchStudents}
+              disabled={loading || promoting}
+              variant="primary"
+              icon={Users}
+            >
+              {loading ? "Fetching Students..." : "Get Students"}
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
 
-      {message && <p className={styles.message}>{message}</p>}
-
-      {/* === STUDENT LIST === */}
+      {/* Card 2: Student List Preview */}
       {loading ? (
-        <div className={styles.loading}>
-          <Spinner /> Fetching students...
+        <div className="flex min-h-[200px] flex-col items-center justify-center gap-2">
+          <Spinner />
+          <p className="text-sm text-ink-500">Fetching students for promotion...</p>
         </div>
       ) : (
         students.length > 0 && (
-          <div className={styles.list}>
-            <h3>Students Found ({students.length})</h3>
-            <ul>
-              {students.map((s) => (
-                <li key={s.id}>
-                  {s.name} {s.surname} ({s.level})
-                </li>
-              ))}
-            </ul>
-          </div>
+          <Card>
+            <CardHeader
+              title={`Students Found (${students.length})`}
+              subtitle="Review students before confirming promotion"
+            />
+            <CardBody className="space-y-6">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 max-h-60 overflow-y-auto p-1">
+                {students.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-2 rounded-lg border border-ink-100 bg-ink-50/50 p-2.5 text-xs text-ink-800"
+                  >
+                    <UserCheck size={14} className="text-brand-600 shrink-0" />
+                    <span className="font-medium truncate">
+                      {s.name} {s.surname}
+                    </span>
+                    <span className="text-ink-400 text-[11px]">({s.level})</span>
+                  </div>
+                ))}
+              </div>
+
+              <hr className="border-ink-100" />
+
+              {/* Promotion Form */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-500">
+                  Target Level & Academic Year
+                </h4>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <Field label="Next Academic Year" required>
+                    <Select
+                      value={nextAcademicYear}
+                      onChange={(e) => setNextAcademicYear(e.target.value)}
+                    >
+                      <option value="">Select Next Year</option>
+                      <option value="2024/2025">2024/2025</option>
+                      <option value="2025/2026">2025/2026</option>
+                      <option value="2026/2027">2026/2027</option>
+                    </Select>
+                  </Field>
+
+                  <Field label="Next Level" required>
+                    <Select
+                      value={nextLevel}
+                      onChange={(e) => setNextLevel(e.target.value)}
+                    >
+                      <option value="">Select Next Level</option>
+                      {levels.map((lvl) => (
+                        <option key={lvl} value={lvl}>
+                          {lvl.toUpperCase()}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="Next Variant (Optional)">
+                    <Select
+                      value={nextVariant}
+                      onChange={(e) => setNextVariant(e.target.value)}
+                    >
+                      <option value="">Select Next Variant</option>
+                      {variants.map((v) => (
+                        <option key={v} value={v}>
+                          {v.toUpperCase()}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    onClick={promoteStudents}
+                    disabled={promoting}
+                    variant="primary"
+                    icon={ArrowRight}
+                    size="lg"
+                  >
+                    {promoting ? "Promoting..." : `Promote ${students.length} Students`}
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
         )
-      )}
-
-      {/* === PROMOTION SECTION === */}
-      {students.length > 0 && (
-        <div className={styles.promoteSection}>
-          <h3>Promote Students</h3>
-
-          <div className={styles.nextSelectors}>
-            <select
-              value={nextAcademicYear}
-              onChange={(e) => setNextAcademicYear(e.target.value)}
-            >
-              <option value="">Select Next Academic Year</option>
-              <option value="2024/2025">2024/2025</option>
-              <option value="2025/2026">2025/2026</option>
-              <option value="2026/2027">2026/2027</option>
-            </select>
-
-            <select
-              value={nextLevel}
-              onChange={(e) => setNextLevel(e.target.value)}
-            >
-              <option value="">Select Next Level</option>
-              {levels.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl.toUpperCase()}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={nextVariant}
-              onChange={(e) => setNextVariant(e.target.value)}
-            >
-              <option value="">Select Next Variant (optional)</option>
-              {variants.map((v) => (
-                <option key={v} value={v}>
-                  {v.toUpperCase()}
-                </option>
-              ))}
-            </select>
-
-            <button
-              className={styles.promoteBtn}
-              onClick={promoteStudents}
-              disabled={promoting}
-            >
-              {promoting ? "Promoting..." : "Promote to Next Level"}
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );
