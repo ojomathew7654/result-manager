@@ -7,7 +7,7 @@ export default function PageHeader({
   className,
   titleClassName,
   subtitleClassName,
-  dark = false,
+  dark = true,
 }) {
   return (
     <div className={cn("mb-6 flex flex-wrap items-start justify-between gap-4", className)}>
@@ -15,7 +15,7 @@ export default function PageHeader({
         <h1
           className={cn(
             "font-display text-2xl font-semibold",
-            dark ? "text-white" : "text-ink-900 dark:text-white",
+            dark ? "text-white" : "text-ink-900",
             titleClassName
           )}
         >
@@ -25,7 +25,7 @@ export default function PageHeader({
           <p
             className={cn(
               "mt-1 text-sm",
-              dark ? "text-ink-300" : "text-ink-400 dark:text-ink-300",
+              dark ? "text-ink-300" : "text-ink-400",
               subtitleClassName
             )}
           >
