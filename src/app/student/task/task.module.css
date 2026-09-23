@@ -1,0 +1,12 @@
+.btnContainer {
+  padding: 20px;
+}
+.btnContainer button {
+  background-color: rgb(43, 201, 43);
+  padding: 10px 20px;
+  cursor: pointer;
+  margin: 20px;
+  font-weight: bold;
+  font-size: 20px;
+  border-radius: 20px;
+}

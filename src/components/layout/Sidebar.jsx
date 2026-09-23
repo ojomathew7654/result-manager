@@ -1,17 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { ChevronDown, ChevronUp, GraduationCap, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import axios from "axios";
 import { adminNav } from "@/lib/navigation";
 
 export default function Sidebar({ open, onClose }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const [school, setSchool] = useState({});
+
   const [studentsOpen, setStudentsOpen] = useState(
     pathname.startsWith("/admin/primary") || pathname.startsWith("/admin/secondary")
   );
+
+  useEffect(() => {
+    const fetchSchoolData = async () => {
+      try {
+        const { data } = await axios.get(`/api/school/${session.schoolId}`);
+        setSchool(data || {});
+      } catch (error) {
+        console.error("Error fetching school data:", error);
+      }
+    };
+
+    if (session?.schoolId) {
+      fetchSchoolData();
+    }
+  }, [session]);
+
+  const schoolDisplayName = school.name || school.fullName || "School Portal";
+  const currentYear = new Date().getFullYear();
 
   return (
     <>
@@ -28,11 +52,24 @@ export default function Sidebar({ open, onClose }) {
       >
         <div className="flex items-center justify-between gap-2 px-5 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400 text-ink-900">
-              <GraduationCap size={20} strokeWidth={2.25} />
-            </div>
-            <div>
-              <p className="font-display text-sm font-semibold leading-tight text-white">Beida Basic</p>
+            {school?.logo ? (
+              <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-ink-700 bg-ink-800">
+                <Image
+                  src={school.logo}
+                  alt={`${schoolDisplayName} logo`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400 text-ink-900 shrink-0">
+                <GraduationCap size={20} strokeWidth={2.25} />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-sm font-semibold leading-tight text-white truncate uppercase">
+                {schoolDisplayName}
+              </p>
               <p className="text-xs text-ink-300">Result Manager</p>
             </div>
           </div>
@@ -106,6 +143,16 @@ export default function Sidebar({ open, onClose }) {
             );
           })}
         </nav>
+
+        {/* Sidebar Footer / Trademark */}
+        <div className="border-t border-ink-800 px-5 py-4 text-xs text-ink-400 shrink-0">
+          <p className="font-medium text-ink-300">
+            Powered by <span className="text-amber-400 font-semibold">AS Code Elevate</span>
+          </p>
+          <p className="text-[11px] text-ink-400/80 mt-0.5">
+            Made by AS Code Elevate &copy; {currentYear}
+          </p>
+        </div>
       </aside>
     </>
   );
