@@ -105,7 +105,7 @@ const AllStudents = () => {
 
   return (
     <div>
-      <PageHeader title="Secondary students" subtitle="Browse and manage students in secondary classes." action={<Button as={Link} href="/admin" variant="outline" icon={ArrowLeft}>Dashboard</Button>} />
+      <PageHeader dark={false} title="Secondary students" subtitle="Browse and manage students in secondary classes." action={<Button as={Link} href="/admin" variant="outline" icon={ArrowLeft}>Dashboard</Button>} />
       <Card className="mb-5">
         <CardBody className="grid gap-4 sm:grid-cols-2">
           <Select id="academicYearSelect" value={academicYear} onChange={handleAcademicYearChange}>

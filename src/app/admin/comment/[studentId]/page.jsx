@@ -271,6 +271,7 @@ const EachStudentResult = ({ params }) => {
     <div>
       <PageHeader
         title="Student remarks"
+         dark={false}
         subtitle={`Update comments and traits for ${student?.name || "this student"}.`}
         action={<Button type="button" variant="outline" icon={ArrowLeft} onClick={() => router.back()}>Back</Button>}
       />

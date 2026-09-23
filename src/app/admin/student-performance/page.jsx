@@ -171,6 +171,7 @@ const StudentPerformance = () => {
   return (
     <div>
       <PageHeader
+        dark={false}
         title="Student Performance"
         subtitle="Generate termly broadsheets and track academic year student performance rankings."
         action={

@@ -61,7 +61,7 @@ export default function EditAdmin({ params }) {
 
   return (
     <div>
-      <PageHeader title="Edit admin" subtitle={`Update ${user.name || "administrator"}'s account details.`} action={<Button as="a" href="/admin/users" variant="outline" icon={ArrowLeft}>Back</Button>} />
+      <PageHeader dark={false} title="Edit admin" subtitle={`Update ${user.name || "administrator"}'s account details.`} action={<Button as="a" href="/admin/users" variant="outline" icon={ArrowLeft}>Back</Button>} />
       <Card className="max-w-3xl"><CardBody><form onSubmit={handleSubmit} className="grid gap-5 sm:grid-cols-2">
         <Field label="Username" htmlFor="username"><Input id="username" name="username" value={user.username || ""} onChange={updateField} required /></Field>
         <Field label="Password" htmlFor="password"><Input id="password" name="password" value={user.password || ""} onChange={updateField} required /></Field>

@@ -73,6 +73,7 @@ const TeacherTaskPage = ({ params }) => {
       </div>
 
       <PageHeader
+        dark={false}
         title="Teacher Assignments"
         subtitle="View and inspect online tasks created by this teacher."
       />

@@ -63,7 +63,7 @@ export default function EditTeacher({ params }) {
 
   return (
     <div>
-      <PageHeader title="Edit teacher" subtitle={`Update ${user.name || "teacher"}'s account details.`} action={<Button as="a" href="/admin/teachers" variant="outline" icon={ArrowLeft}>Back</Button>} />
+      <PageHeader dark={false} title="Edit teacher" subtitle={`Update ${user.name || "teacher"}'s account details.`} action={<Button as="a" href="/admin/teachers" variant="outline" icon={ArrowLeft}>Back</Button>} />
       <Card className="max-w-3xl"><CardBody><form onSubmit={handleSubmit} className="grid gap-5 sm:grid-cols-2">
         <Field label="Username" htmlFor="username"><Input id="username" name="username" value={user.username || ""} onChange={updateField} required /></Field>
         <Field label="Password" htmlFor="password"><Input id="password" name="password" value={user.password || ""} onChange={updateField} required /></Field>

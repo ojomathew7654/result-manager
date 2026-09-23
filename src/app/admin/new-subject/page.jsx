@@ -258,6 +258,7 @@ const NewSubject = () => {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <PageHeader
+        dark={false}
         title="Subject Management"
         subtitle="Create global subjects for your school or manage subject allocations per class."
       />

@@ -94,6 +94,7 @@ const StudentCredential = () => {
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="no-print">
         <PageHeader
+         dark={false}
           title="Student Credentials"
           subtitle="Generate and print portal login credential slips for students."
         />

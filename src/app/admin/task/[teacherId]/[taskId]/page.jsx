@@ -179,6 +179,7 @@ export default function AssignmentSubmissions({ params }) {
       </div>
 
       <PageHeader
+        dark={false}
         title="Assignment Submissions"
         subtitle={`Viewing submissions for ${assignment?.title || "assignment"}`}
       />

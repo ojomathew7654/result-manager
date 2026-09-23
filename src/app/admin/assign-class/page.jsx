@@ -63,6 +63,7 @@ const AllUser = () => {
   return (
     <div>
       <PageHeader
+        dark={false}
         title="Assign Class & Subject"
         subtitle="Select a teacher to configure their assigned subjects, teaching classes, and form teacher permissions."
         action={

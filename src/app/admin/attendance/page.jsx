@@ -238,6 +238,7 @@ const AttendanceRegister = () => {
             Dashboard
           </Button>
         }
+         dark={false}
       />
 
       <Card className="mb-6">

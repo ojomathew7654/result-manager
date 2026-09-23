@@ -216,7 +216,7 @@ const UpdateSchool = () => {
 
   return (
     <div>
-      <PageHeader title="Update school" subtitle="Keep your school profile and term settings current." />
+      <PageHeader title="Update school" subtitle="Keep your school profile and term settings current." dark={false} />
       <Card className="max-w-3xl"> 
         <CardBody>
           <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-2">

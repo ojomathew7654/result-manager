@@ -114,6 +114,7 @@ const StudentResult = () => {
     <div>
       <div className="no-print">
         <PageHeader
+          dark={false}
           title="Print Results"
           subtitle="Generate and print termly student report cards."
           action={

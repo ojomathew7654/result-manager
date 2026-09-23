@@ -72,7 +72,7 @@ const AllUser = () => {
   });
   return (
     <div>
-      <PageHeader title="Teachers" subtitle="Manage teaching staff in your school." action={<Button as={Link} href="/admin" variant="outline" icon={ArrowLeft}>Dashboard</Button>} />
+      <PageHeader dark={false} title="Teachers" subtitle="Manage teaching staff in your school." action={<Button as={Link} href="/admin" variant="outline" icon={ArrowLeft}>Dashboard</Button>} />
       <Card>
         <CardBody className="overflow-x-auto p-0">
         {users.length > 0 ? (

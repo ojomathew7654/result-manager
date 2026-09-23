@@ -129,6 +129,7 @@ const MoveStudents = () => {
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
       <PageHeader
+        dark={false}
         title="Move Students to Next Level"
         subtitle="Batch promote or transition student records to a new level and academic year."
       />

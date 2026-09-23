@@ -96,6 +96,7 @@ const ImportStudents = () => {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <PageHeader
+        dark={false}
         title="Import Students"
         subtitle="Bulk import students into your school database using an Excel spreadsheet."
       />

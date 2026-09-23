@@ -58,6 +58,7 @@ const AllUser = () => {
   return (
     <div>
       <PageHeader
+        dark={false}
         title="Check Tasks"
         subtitle="Select a teacher to review their assigned online tasks and student submissions."
         action={

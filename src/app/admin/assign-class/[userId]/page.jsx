@@ -145,6 +145,7 @@ const EditUser = ({ params }) => {
   return (
     <div>
       <PageHeader
+        dark={false}
         title={`Assign Classes & Subjects – ${user.name || user.username}`}
         subtitle="Teachers can only record scores and view data for their assigned classes and subjects."
         action={

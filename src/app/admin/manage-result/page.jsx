@@ -187,6 +187,7 @@ const Class = () => {
   return (
     <div>
       <PageHeader
+        dark={false}
         title="Manage Results"
         subtitle="Enter and update continuous assessment and exam scores for students."
         action={

@@ -71,7 +71,7 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="A snapshot of your school this term." />
+      <PageHeader title="Dashboard" subtitle="A snapshot of your school this term."  dark={false}/>
 
       {error ? <p className="mb-5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
 

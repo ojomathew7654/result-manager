@@ -42,7 +42,7 @@ export default function ReviewResult() {
 
   return (
     <div>
-      <PageHeader title="Review results" subtitle="Inspect submitted student results before publishing." />
+      <PageHeader dark={false} title="Review results" subtitle="Inspect submitted student results before publishing." />
       <Card className="mb-5"><CardBody className="grid gap-4 sm:grid-cols-3">
         <Field label="Academic year" htmlFor="academicYear"><Select id="academicYear" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)}><option value="">Select academic year</option><option value="2025/2026">2025/2026</option></Select></Field>
         <Field label="Class" htmlFor="class"><Select id="class" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}><option value="">Select class</option>{schoolClasses.map((item) => <option key={item} value={item}>{item}</option>)}</Select></Field>

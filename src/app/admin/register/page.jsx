@@ -99,6 +99,7 @@ const Register = () => {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <PageHeader
+        dark={false}
         title="Register Staff User"
         subtitle="Create a new teacher or administrative user account for your school."
       />

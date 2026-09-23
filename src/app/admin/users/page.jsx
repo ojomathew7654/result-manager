@@ -78,6 +78,7 @@ export default function AdminUsersPage() {
   return (
     <div>
       <PageHeader
+        dark={false}
         title="School admins"
         subtitle="Manage administrator access for your school."
         action={

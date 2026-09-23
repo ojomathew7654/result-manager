@@ -15,7 +15,7 @@ export default function PageHeader({
         <h1
           className={cn(
             "font-display text-2xl font-semibold",
-            dark ? "text-white" : "text-ink-900",
+            dark ? "text-white" : "text-ink-900 ",
             titleClassName
           )}
         >
@@ -25,7 +25,7 @@ export default function PageHeader({
           <p
             className={cn(
               "mt-1 text-sm",
-              dark ? "text-ink-300" : "text-ink-400",
+              dark ? "text-ink-300" : "text-ink-400 dark:text-ink-300",
               subtitleClassName
             )}
           >
