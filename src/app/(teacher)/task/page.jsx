@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import imageCompression from "browser-image-compression";
 import { useUploadThing } from "@/utils/uploadthing";
 import { FileUploaderArray } from "@/utils/FileUploader/FileUploader";
-import { Plus, Trash2, Upload, FileText, Calendar, BookOpen, Check, Layers } from "lucide-react";
+import { Plus, Trash2, Upload, Check } from "lucide-react";
 
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";

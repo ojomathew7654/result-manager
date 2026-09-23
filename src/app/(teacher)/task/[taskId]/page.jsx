@@ -4,13 +4,12 @@ import axios from "axios";
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ZoomIn, ZoomOut, X, Calendar, User, CheckCircle2, Save, FileText, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ZoomIn, ZoomOut, X, Calendar, User, Save, FileText, Image as ImageIcon } from "lucide-react";
 
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import Field from "@/components/ui/Field";
 import Input from "@/components/ui/Input";
-import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
 import { useSonner } from "@/lib/useSonner";
