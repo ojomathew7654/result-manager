@@ -1,244 +1,49 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import axios from "axios";
-import { useSession, signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import styles from "./result-availability.module.css";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Select from "@/components/ui/Select";
+import Field from "@/components/ui/Field";
+import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
 
-const ResultAvailability = () => {
-  const { data: session, status: sessionStatus } = useSession();
+export default function ResultAvailability() {
+  const { data: session, status } = useSession();
   const router = useRouter();
-
   const [schoolClasses, setSchoolClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [academicYear, setAcademicYear] = useState("");
+  const [selectedTerm, setSelectedTerm] = useState("");
   const [selectedStudents, setSelectedStudents] = useState({});
   const [loading, setLoading] = useState(false);
-  const [selectedTerm, setSelectedTerm] = useState("");
 
-  const handleTermChange = (event) => {
-    setSelectedTerm(event.target.value);
-  };
-
+  useEffect(() => { if (session?.role && session.role !== "ADMIN") signOut({ redirect: false }).then(() => router.push("/")); }, [router, session]);
+  useEffect(() => { if (session?.schoolId) axios.get(`/api/school/${session.schoolId}`).then(({ data }) => setSchoolClasses((data.classes || []).sort())); }, [session?.schoolId]);
   useEffect(() => {
-    if (selectedTerm && academicYear && selectedClass) {
-      fetchStudents(academicYear, selectedClass);
-    }
-  }, [selectedTerm, academicYear, selectedClass]);
-
-  useEffect(() => {
-    const fetchSchoolClasses = async () => {
-      try {
-        const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        setSchoolClasses(data.classes.sort() || []);
-      } catch (error) {
-        console.error("Error fetching school classes:", error);
-      }
-    };
-
-    if (session?.schoolId) {
-      fetchSchoolClasses();
-    }
-  }, [session]);
-
-  const fetchStudents = async (academicYear, selectedClass) => {
-    if (!selectedClass || !academicYear) return;
+    if (!session?.schoolId || !selectedTerm || !academicYear || !selectedClass) return;
     setLoading(true);
-    try {
-      const encodedAcademicYear = encodeURIComponent(academicYear);
-      const { data } = await axios.get(
-        `/api/student/class/FIRST-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
-      );
-      console.log(data);
+    const year = encodeURIComponent(academicYear);
+    axios.get(`/api/student/class/FIRST-${session.schoolId}-${year}-${selectedClass}`).then(({ data }) => {
       setStudents(data);
+      setSelectedStudents(Object.fromEntries(data.map((student) => [student.id, Boolean(student.resultAvailability?.some((item) => item.termType === selectedTerm && item.available))])));
+    }).catch((error) => console.error("Failed to fetch students:", error)).finally(() => setLoading(false));
+  }, [academicYear, selectedClass, selectedTerm, session?.schoolId]);
 
-      const selected = {};
-      data.forEach((student) => {
-        // Check if the current student's resultAvailability matches the selected term
-        const termAvailability = student.resultAvailability.find(
-          (availability) =>
-            availability.termType === selectedTerm &&
-            availability.available === true
-        );
-
-        // Set the availability in selectedStudents for each student
-        selected[student.id] = termAvailability
-          ? termAvailability.available
-          : false;
-      });
-      setSelectedStudents(selected);
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAcademicYearChange = async (event) => {
-    setAcademicYear(event.target.value);
-    if (selectedClass) {
-      await fetchStudents(event.target.value, selectedClass);
-    }
-  };
-
-  const handleClassChange = async (event) => {
-    const newSelectedClass = event.target.value;
-    setSelectedClass(newSelectedClass);
-    await fetchStudents(academicYear, newSelectedClass);
-  };
-
-  const handleToggleStudentAvailability = (studentId) => {
-    setSelectedStudents((prevSelected) => ({
-      ...prevSelected,
-      [studentId]: !prevSelected[studentId],
-    }));
-  };
-
-  const handleBulkUpdate = async () => {
-    if (!selectedTerm) {
-      alert("Please select a term before updating.");
-      return;
-    }
-
+  async function handleBulkUpdate() {
+    if (!selectedTerm) return alert("Please select a term before updating.");
     setLoading(true);
+    try { await axios.put("/api/student/class/6", { updates: Object.entries(selectedStudents).map(([studentId, availability]) => ({ studentId, termType: selectedTerm, isAvailable: availability })) }); alert("Result availability updated successfully."); }
+    catch (error) { console.error(error); alert("Failed to update result availability."); }
+    finally { setLoading(false); }
+  }
 
-    try {
-      const updates = Object.entries(selectedStudents).map(
-        ([studentId, availability]) => ({
-          studentId,
-          termType: selectedTerm,
-          isAvailable: availability,
-        })
-      );
-      await axios.put("/api/student/class/6", { updates });
-      alert("Result availability updated successfully.");
-    } catch (error) {
-      console.error("Error updating result availability:", error);
-      alert("Failed to update result availability.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (status === "loading") return <div className="flex min-h-48 items-center justify-center gap-3 text-ink-500"><Spinner /> Please wait...</div>;
+  if (status !== "authenticated") router.push("/");
 
-  useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      if (session.role !== "ADMIN") {
-        signOut();
-        router.push("/");
-      }
-    }
-  }, [sessionStatus, session, router]);
-
-  if (sessionStatus === "loading")
-    return (
-      <h1 className="waitH1">
-        <Spinner /> Please wait...
-      </h1>
-    );
-  if (sessionStatus !== "authenticated") router.push("/");
-
-  students?.sort((a, b) =>
-    a.surname < b.surname ? -1 : a.surname > b.surname ? 1 : 0
-  );
-
-  return (
-    <div className={styles.container}>
-      <h1>This is where you makes student results available.</h1>
-      <div className={styles.selectContainer}>
-        <select
-          id="academicYearSelect"
-          value={academicYear}
-          onChange={handleAcademicYearChange}
-        >
-          <option value="" disabled>
-            Select academic year
-          </option>
-          <option value="2025/2026">2025/2026</option>
-        </select>
-
-        <select
-          id="class-select"
-          value={selectedClass}
-          onChange={handleClassChange}
-        >
-          <option value="" disabled>
-            Select Class
-          </option>
-          {schoolClasses.map((className) => (
-            <option key={className} value={className}>
-              {className.toUpperCase()}
-            </option>
-          ))}
-        </select>
-
-        <select
-          id="term-select"
-          value={selectedTerm}
-          onChange={handleTermChange}
-        >
-          <option value="" disabled>
-            Select Term
-          </option>
-          <option value="FIRST">First Term</option>
-          <option value="SECOND">Second Term</option>
-          <option value="THIRD">Third Term</option>
-        </select>
-      </div>
-
-      <>
-        <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Surname</th>
-                <th>Name</th>
-                <th>Result Availability</th>
-              </tr>
-            </thead>
-            {selectedTerm && (
-              <tbody>
-                {students.map((student, index) => (
-                  <tr key={student.id}>
-                    <td>{index + 1}</td>
-                    <td>{student.surname}</td>
-                    <td>{student.name}</td>
-                    <td>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={selectedStudents[student.id]}
-                          onChange={() =>
-                            handleToggleStudentAvailability(student.id)
-                          }
-                        />
-                        {selectedStudents[student.id]
-                          ? "Available"
-                          : "Not Available"}
-                      </label>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            )}
-          </table>
-        </div>
-        {students.length > 0 && (
-          <div className={styles.buttonContainer}>
-            <button
-              onClick={handleBulkUpdate}
-              className={loading && styles.disabled}
-              disabled={loading}
-            >
-              {loading ? "please wait..." : " Update All Selected"}
-            </button>
-          </div>
-        )}
-      </>
-    </div>
-  );
-};
-
-export default ResultAvailability;
+  return <div><PageHeader dark={false} title="Result availability" subtitle="Choose which students can view published results." /><Card className="mb-5"><CardBody className="grid gap-4 sm:grid-cols-3"><Field label="Academic year" htmlFor="academicYear"><Select id="academicYear" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)}><option value="">Select academic year</option><option value="2025/2026">2025/2026</option></Select></Field><Field label="Class" htmlFor="class"><Select id="class" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}><option value="">Select class</option>{schoolClasses.map((item) => <option key={item} value={item}>{item}</option>)}</Select></Field><Field label="Term" htmlFor="term"><Select id="term" value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)}><option value="">Select term</option><option value="FIRST">First Term</option><option value="SECOND">Second Term</option><option value="THIRD">Third Term</option></Select></Field></CardBody></Card><Card><CardBody className="overflow-x-auto p-0"><table className="min-w-full text-left text-sm"><thead className="border-b border-ink-100 bg-ink-50 text-xs uppercase text-ink-500"><tr><th className="px-4 py-3">No</th><th className="px-4 py-3">Surname</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Availability</th></tr></thead><tbody className="divide-y divide-ink-100">{loading ? <tr><td colSpan="4" className="px-5 py-10 text-center text-ink-400">Loading students...</td></tr> : students.map((student, index) => <tr key={student.id}><td className="px-4 py-3">{index + 1}</td><td className="px-4 py-3">{student.surname}</td><td className="px-4 py-3">{student.name}</td><td className="px-4 py-3"><label className="inline-flex items-center gap-2 text-sm text-ink-600"><input type="checkbox" checked={Boolean(selectedStudents[student.id])} onChange={() => setSelectedStudents((current) => ({ ...current, [student.id]: !current[student.id] }))} />{selectedStudents[student.id] ? "Available" : "Not available"}</label></td></tr>)}</tbody></table>{students.length > 0 ? <div className="p-5"><Button type="button" onClick={handleBulkUpdate} disabled={loading}>{loading ? "Updating..." : "Update selected"}</Button></div> : null}</CardBody></Card></div>;
+}

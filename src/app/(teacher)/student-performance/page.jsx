@@ -1,10 +1,18 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
-import styles from "./student-performance.module.css";
 import axios from "axios";
 import { useSession } from "next-auth/react";
-import Spinner from "@/components/Spinner/Spinner";
+import { redirect } from "next/navigation";
 import Image from "next/image";
+import Spinner from "@/components/Spinner/Spinner";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
+import { useSonner } from "@/lib/useSonner";
+import { BarChart3, Award } from "lucide-react";
 
 const StudentPerformance = () => {
   const { data: session, status: sessionStatus } = useSession();
@@ -16,6 +24,7 @@ const StudentPerformance = () => {
   const [students, setStudents] = useState([]);
   const [school, setSchool] = useState({});
   const [levelAndVariant, setLevelAndVariant] = useState(null);
+  const { customSonner } = useSonner();
 
   useEffect(() => {
     const fetchSchoolClasses = async () => {
@@ -34,7 +43,7 @@ const StudentPerformance = () => {
 
   const getTermlyPerformance = async () => {
     if (!academicYear || !selectedClass || !termType) {
-      alert("Please select academicYear, term and Class");
+      customSonner({ type: "error", text: "Please select Academic Year, Term, and Class before fetching broadsheet." });
       return;
     }
     setLoading(true);
@@ -48,25 +57,25 @@ const StudentPerformance = () => {
         },
       });
 
-      // Remove `level` and `variant` from each student
-      const levelAndVariant = data.map(({ level, variant }) => ({
+      const lvlVar = (data || []).map(({ level, variant }) => ({
         level,
         variant,
       }));
 
-      setLevelAndVariant(levelAndVariant[0]);
+      setLevelAndVariant(lvlVar[0] || null);
 
-      const sanitizedStudents = data.map(({ level, variant, ...rest }) => rest);
-
+      const sanitizedStudents = (data || []).map(({ level, variant, ...rest }) => rest);
       setStudents(sanitizedStudents);
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching termly performance:", error);
+      customSonner({ type: "error", text: "Failed to fetch broadsheet data." });
     }
     setLoading(false);
   };
+
   const getYeralyPerformance = async () => {
     if (!academicYear || !selectedClass) {
-      alert("Please select academicYear and Class");
+      customSonner({ type: "error", text: "Please select Academic Year and Class before fetching yearly positions." });
       return;
     }
     setLoading(true);
@@ -76,270 +85,265 @@ const StudentPerformance = () => {
       const { data } = await axios.get(
         `/api/student/performance/yearly/${encodedAcademicYear}-${session?.schoolId}-${level}-${variant}`
       );
-      setYearlyData(data);
+      setYearlyData(data || []);
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching yearly performance:", error);
+      customSonner({ type: "error", text: "Failed to fetch yearly academic positions." });
     }
     setLoading(false);
   };
 
-  const handleAcademicYearChange = async (event) => {
-    const academicYear = event.target.value;
-    setAcademicYear(academicYear);
+  const handleAcademicYearChange = (event) => {
+    setAcademicYear(event.target.value);
   };
 
-  const handleTermChange = async (event) => {
-    const termType = event.target.value;
-    setTermType(termType);
-  };
-  const handleClassChange = async (e) => {
-    const selectedClass = e.target.value;
-    setSelectedClass(selectedClass);
+  const handleTermChange = (event) => {
+    setTermType(event.target.value);
   };
 
-  if (sessionStatus === "loading")
+  const handleClassChange = (e) => {
+    setSelectedClass(e.target.value);
+  };
+
+  if (sessionStatus === "loading") {
     return (
-      <h1 className="waitH1">
-        <Spinner /> Please wait...
-      </h1>
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-white">
+        <Spinner />
+        <p className="text-sm font-medium text-ink-300">Loading student performance...</p>
+      </div>
     );
+  }
+
   if (sessionStatus !== "authenticated") redirect("/");
+
   const subjectKeys = Array.from(
     new Set(
       students.flatMap((student) =>
         Object.keys(student).filter(
           (key) =>
-            !["surname", "name", "totalScore", "average", "position"].includes(
-              key
-            )
+            !["surname", "name", "totalScore", "average", "position"].includes(key)
         )
       )
     )
   );
-  const PaddedCell = ({ value }) => <>&nbsp;{value ?? "-"}&nbsp;</>;
 
   return (
-    <div className={styles.container}>
-      <h1>Student Performance</h1>
-      <div className={styles.selectContainer}>
-        <select value={termType} onChange={handleTermChange}>
-          <option value="" disabled>
-            Select Term
-          </option>
-          <option value="FIRST">First Term</option>
-          <option value="SECOND">Second Term</option>
-          <option value="THIRD">Third Term</option>
-        </select>
-        <select
-          id="academicYearSelect"
-          value={academicYear}
-          onChange={handleAcademicYearChange}
-        >
-          <option value="" disabled>
-            Select academic year
-          </option>
-          <option value="2025/2026">2025/2026</option>
-        </select>
-        <select
-          id="class-select"
-          value={selectedClass}
-          onChange={handleClassChange}
-        >
-          <option value="" disabled>
-            Select Class
-          </option>
-          {session?.teacherOf?.map((className) => (
-            <option key={className} value={className}>
-              {className.toUpperCase()}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Student Performance & Broadsheet"
+        subtitle="Select term, academic year, and class to view class broadsheet matrix and yearly academic positions."
+      />
 
-      <h2 className={styles.sectionHeader}>
-        {levelAndVariant?.level} - {levelAndVariant?.variant} Broadsheet
-      </h2>
+      {/* Filter Options Card */}
+      <Card>
+        <CardHeader
+          title="Performance Filters"
+          subtitle="Choose term, session, and class to load broadsheet or position tables."
+        />
+        <CardBody className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Term" htmlFor="termSelect">
+              <Select id="termSelect" value={termType} onChange={handleTermChange}>
+                <option value="" disabled>
+                  Select Term
+                </option>
+                <option value="FIRST">First Term</option>
+                <option value="SECOND">Second Term</option>
+                <option value="THIRD">Third Term</option>
+              </Select>
+            </Field>
 
-      <div>
-        <button disabled={loading} onClick={getTermlyPerformance}>
-          {loading ? "Please wait..." : "Get Broadsheet"}
-        </button>
-      </div>
+            <Field label="Academic Year" htmlFor="academicYearSelect">
+              <Select
+                id="academicYearSelect"
+                value={academicYear}
+                onChange={handleAcademicYearChange}
+              >
+                <option value="" disabled>
+                  Select academic year
+                </option>
+                <option value="2025/2026">2025/2026</option>
+              </Select>
+            </Field>
 
-      {students?.length > 0 && (
-        <>
-          <div className={styles.tableWrapper}>
-            <header className={styles.header}>
-              <div className={styles.logo}>
-                <div className={styles.imageContainer}>
+            <Field label="Class" htmlFor="classSelect">
+              <Select id="classSelect" value={selectedClass} onChange={handleClassChange}>
+                <option value="" disabled>
+                  Select Class
+                </option>
+                {session?.teacherOf?.map((className) => (
+                  <option key={className} value={className}>
+                    {className.toUpperCase()}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button
+              type="button"
+              onClick={getTermlyPerformance}
+              disabled={loading}
+              icon={BarChart3}
+            >
+              {loading ? "Please wait..." : "Get Broadsheet"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={getYeralyPerformance}
+              disabled={loading}
+              icon={Award}
+            >
+              {loading ? "Please wait..." : "Get Academic Positions"}
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Termly Broadsheet Display */}
+      {students.length > 0 && (
+        <Card>
+          <CardHeader
+            title={`${levelAndVariant?.level?.toUpperCase() || ""} ${
+              levelAndVariant?.variant ? " - " + levelAndVariant.variant.toUpperCase() : ""
+            } Broadsheet`}
+            subtitle={`${termType} Term, Academic Session`}
+          />
+          <CardBody className="p-0">
+            {/* Header Banner */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 border-b border-ink-100 bg-ink-50/70 p-6 text-center sm:text-left">
+              {school?.logo && (
+                <div className="relative h-20 w-24 overflow-hidden rounded-xl border border-ink-200 bg-white shrink-0">
                   <Image
-                    src={school?.logo}
-                    alt="logo"
-                    height={110}
-                    width={130}
+                    src={school.logo}
+                    alt="School logo"
+                    fill
+                    className="object-contain p-1"
                   />
                 </div>
-              </div>
-              <div className={styles.headerContents}>
-                <h4>{school?.fullName && school.fullName.toUpperCase()}</h4>
-                {school.name == "CRYSTAL BRAINS SCHOOL" && (
-                  <h5>BRISTISH AND MONTESSORI</h5>
+              )}
+              <div>
+                <h3 className="font-display text-lg font-bold uppercase text-ink-900">
+                  {school?.fullName || school?.name}
+                </h3>
+                {school?.name === "CRYSTAL BRAINS SCHOOL" && (
+                  <p className="text-xs font-semibold text-brand-600">BRITISH AND MONTESSORI</p>
                 )}
-                <span>
-                  MOTTO: {school?.motto && school.motto.toUpperCase()}
-                </span>
-                <h4 className={styles.term}>
-                  {`${levelAndVariant?.level?.toUpperCase()}${
-                    levelAndVariant?.variant
-                      ? " - " + levelAndVariant.variant.toUpperCase()
-                      : ""
-                  } Broadsheet – ${termType} Term, 2024/2025 Academic Session`}
-                </h4>
+                {school?.motto && (
+                  <p className="text-xs text-ink-500 font-medium">MOTTO: {school.motto.toUpperCase()}</p>
+                )}
+                <p className="text-xs font-semibold text-ink-700 mt-1">
+                  {`${levelAndVariant?.level?.toUpperCase() || ""}${
+                    levelAndVariant?.variant ? " - " + levelAndVariant.variant.toUpperCase() : ""
+                  } Broadsheet – ${termType} Term`}
+                </p>
               </div>
-            </header>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles}>#</th>
-                  <th style={styles}>Surname</th>
-                  <th style={styles}>Name</th>
-                  {subjectKeys.map((subject) => {
-                    const trimmedSubject = subject.trim();
-                    const normalized = trimmedSubject.toLowerCase();
-                    const isMath =
-                      normalized === "mathematics" || normalized === "math";
-                    const displaySubject = isMath ? "MATH" : trimmedSubject;
+            </div>
 
-                    const subjectLines = displaySubject.split(/\s+/);
-
-                    return (
-                      <th key={subject} style={styles} title={trimmedSubject}>
-                        <div style={{ lineHeight: "1.2", textAlign: "center" }}>
-                          {subjectLines.map((word, idx) => (
-                            <React.Fragment key={idx}>
-                              {word.toUpperCase()}
-                              {idx !== subjectLines.length - 1 && <br />}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </th>
-                    );
-                  })}
-
-                  <th style={styles}>Total</th>
-                  <th style={styles}>Avg</th>
-                  <th style={styles}>Position</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {students.map((student, index) => (
-                  <tr key={index}>
-                    <td style={styles}>
-                      <PaddedCell value={index + 1} />
-                    </td>
-                    <td style={styles}>
-                      <PaddedCell value={student.surname} />
-                    </td>
-                    <td style={styles}>{student.name}</td>
-
-                    {subjectKeys.map((subject) => (
-                      <td key={subject} style={styles}>
-                        <PaddedCell value={student[subject]} />
-                      </td>
-                    ))}
-
-                    <td style={styles}>
-                      <PaddedCell value={student.totalScore} />
-                    </td>
-                    <td style={styles}>
-                      <PaddedCell
-                        value={`${Number(student.average).toFixed(2)}%`}
-                      />
-                    </td>
-                    <td style={styles}>
-                      <PaddedCell value={student.position} />
-                    </td>
+            {/* Broadsheet Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-xs">
+                <thead className="border-b border-ink-100 bg-ink-100/50 text-ink-600 font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="px-3 py-3 w-10 text-center">#</th>
+                    <th className="px-3 py-3 min-w-[110px]">Surname</th>
+                    <th className="px-3 py-3 min-w-[110px]">Name</th>
+                    {subjectKeys.map((subject) => {
+                      const trimmed = subject.trim();
+                      const isMath = trimmed.toLowerCase() === "mathematics" || trimmed.toLowerCase() === "math";
+                      const display = isMath ? "MATH" : trimmed.toUpperCase();
+                      return (
+                        <th key={subject} className="px-2 py-3 text-center min-w-[70px]" title={trimmed}>
+                          {display}
+                        </th>
+                      );
+                    })}
+                    <th className="px-3 py-3 w-16 text-center bg-brand-50/50 text-brand-900 font-bold">Total</th>
+                    <th className="px-3 py-3 w-16 text-center bg-brand-50/50 text-brand-900 font-bold">Avg</th>
+                    <th className="px-3 py-3 w-16 text-center bg-brand-100/50 text-brand-900 font-bold">Position</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+                </thead>
+                <tbody className="divide-y divide-ink-100 bg-white">
+                  {students.map((student, index) => (
+                    <tr key={index} className="hover:bg-ink-50/50 transition-colors">
+                      <td className="px-3 py-2.5 text-center text-ink-400 font-medium">{index + 1}</td>
+                      <td className="px-3 py-2.5 font-semibold text-ink-900">{student.surname || "-"}</td>
+                      <td className="px-3 py-2.5 text-ink-700">{student.name || "-"}</td>
+
+                      {subjectKeys.map((subject) => (
+                        <td key={subject} className="px-2 py-2.5 text-center text-ink-700">
+                          {student[subject] ?? "-"}
+                        </td>
+                      ))}
+
+                      <td className="px-3 py-2.5 text-center font-bold text-ink-900 bg-brand-50/20">
+                        {student.totalScore ?? "-"}
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-semibold text-brand-700 bg-brand-50/20">
+                        {student.average ? `${Number(student.average).toFixed(2)}%` : "-"}
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-bold text-amber-600 bg-amber-50/30">
+                        {student.position ?? "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardBody>
+        </Card>
       )}
 
-      {/* Yearly Position Table */}
-      <h2 className={styles.sectionHeader}>Academic year positions</h2>
-      <div>
-        <button disabled={loading} onClick={getYeralyPerformance}>
-          {loading ? "Please wait..." : "Get Academic Postion"}
-        </button>
-      </div>
-      <div className={styles.tableWrapper}>
-        {yearlyData.length > 0 && (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Level</th>
-                <th>Surname</th>
-                <th>Name</th>
-                <th>First Term</th>
-                <th>Second Term</th>
-                <th>Third Term</th>
-                <th>Total Score</th>
-                <th>Average</th>
-                <th>Position</th>
-              </tr>
-            </thead>
-            <tbody>
-              {yearlyData.map((student, index) => (
-                <tr key={index}>
-                  <td>
-                    <PaddedCell value={index + 1} />
-                  </td>
-
-                  <td>
-                    {" "}
-                    <PaddedCell value={student.level?.toUpperCase()} />
-                  </td>
-                  <td>
-                    {" "}
-                    <PaddedCell value={student.surname} />
-                  </td>
-                  <td>
-                    {" "}
-                    <PaddedCell value={student.name} />
-                  </td>
-                  <td>
-                    {" "}
-                    <PaddedCell value={student.termlyScores.FIRST} />
-                  </td>
-                  <td>
-                    {" "}
-                    <PaddedCell value={student.termlyScores.SECOND} />
-                  </td>
-                  <td>
-                    {" "}
-                    <PaddedCell value={student.termlyScores.THIRD} />
-                  </td>
-                  <td>
-                    {" "}
-                    <PaddedCell value={student.termlyScores.TOTAL} />
-                  </td>
-                  <td>
-                    <PaddedCell
-                      value={`${Number(student.average).toFixed(2)}%`}
-                    />
-                  </td>
-
-                  <td>{student.position}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* Yearly Position Table Display */}
+      {yearlyData.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Academic Session Yearly Positions"
+            subtitle="Overall academic position summary across first, second, and third terms."
+          />
+          <CardBody className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-xs">
+                <thead className="border-b border-ink-100 bg-ink-50 text-ink-500 font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="px-3 py-3 w-10 text-center">#</th>
+                    <th className="px-3 py-3">Level</th>
+                    <th className="px-3 py-3">Surname</th>
+                    <th className="px-3 py-3">Name</th>
+                    <th className="px-3 py-3 text-center">First Term</th>
+                    <th className="px-3 py-3 text-center">Second Term</th>
+                    <th className="px-3 py-3 text-center">Third Term</th>
+                    <th className="px-3 py-3 text-center font-bold">Total Score</th>
+                    <th className="px-3 py-3 text-center font-bold">Average</th>
+                    <th className="px-3 py-3 text-center font-bold">Position</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ink-100 bg-white">
+                  {yearlyData.map((student, index) => (
+                    <tr key={index} className="hover:bg-ink-50/50 transition-colors">
+                      <td className="px-3 py-2.5 text-center text-ink-400 font-medium">{index + 1}</td>
+                      <td className="px-3 py-2.5 uppercase font-medium text-ink-600">{student.level || "-"}</td>
+                      <td className="px-3 py-2.5 font-semibold text-ink-900">{student.surname || "-"}</td>
+                      <td className="px-3 py-2.5 text-ink-700">{student.name || "-"}</td>
+                      <td className="px-3 py-2.5 text-center text-ink-700">{student.termlyScores?.FIRST ?? "-"}</td>
+                      <td className="px-3 py-2.5 text-center text-ink-700">{student.termlyScores?.SECOND ?? "-"}</td>
+                      <td className="px-3 py-2.5 text-center text-ink-700">{student.termlyScores?.THIRD ?? "-"}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-ink-900">{student.termlyScores?.TOTAL ?? "-"}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-brand-700">
+                        {student.average ? `${Number(student.average).toFixed(2)}%` : "-"}
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-bold text-amber-600">{student.position || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 };
