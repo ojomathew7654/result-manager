@@ -23,11 +23,11 @@ export default function AdminShell({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-paper">
+    <div className="flex h-screen overflow-hidden bg-paper">
       <Sidebar open={open} onClose={() => setOpen(false)} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onMenuClick={() => setOpen(true)} />
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );
