@@ -1,12 +1,21 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import styles from "./register.module.css";
-import { FormInput } from "@/components/form/FormInput";
 import { redirect } from "next/navigation";
 import { useSession } from "next-auth/react";
 import axios from "axios";
+import { UserPlus, User, Key, Lock, ShieldCheck } from "lucide-react";
+
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
+import { useSonner } from "@/lib/useSonner";
 
 const Register = () => {
+  const { customSonner } = useSonner();
   const [loading, setLoading] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
 
@@ -44,26 +53,26 @@ const Register = () => {
   };
 
   useEffect(() => {
-    if (sessionStatus !== "authenticated") {
+    if (sessionStatus !== "authenticated" && sessionStatus !== "loading") {
       redirect("/");
     }
   }, [sessionStatus]);
 
   const handleSubmit = async (e) => {
-    setLoading(true);
     e.preventDefault();
+    setLoading(true);
     const trimmedValues = {
       name: values.name.trim(),
       gender: values.gender.trim(),
       username: values.username.trim(),
       password: values.password.trim(),
       confirmPassword: values.confirmPassword.trim(),
-      schoolId: values.schoolId,
+      schoolId: session?.schoolId || values.schoolId,
     };
 
     // Ensure password and confirm password match
     if (trimmedValues.password !== trimmedValues.confirmPassword) {
-      alert("Passwords do not match");
+      customSonner({ type: "error", text: "Passwords do not match" });
       setLoading(false);
       return;
     }
@@ -76,88 +85,117 @@ const Register = () => {
         password: trimmedValues.password,
         schoolId: trimmedValues.schoolId,
       });
-      alert(data.message);
+      customSonner({ type: "success", text: data.message });
       setValues(initialValues);
       setLoading(false);
     } catch (error) {
       console.error("Error occurred:", error);
+      customSonner({ type: "error", text: "An error occurred while creating user." });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={styles.container}>
+    <div className="mx-auto max-w-2xl space-y-6 p-6">
+      <PageHeader
+        dark={false}
+        title="Register Staff User"
+        subtitle="Create a new teacher or administrative user account for your school."
+      />
+
       <form onSubmit={handleSubmit}>
-        <div>
-          <h2 className={styles.h2}>Register User </h2>
-          <FormInput
-            label=""
-            type="text"
-            placeholder="Name"
-            name="name"
-            required={true}
-            value={values.name}
-            onChange={handleInputChange}
+        <Card>
+          <CardHeader
+            title="User Account Details"
+            subtitle="Enter user profile information and login credentials"
           />
-          <FormInput
-            label=""
-            errMes="Username should be 3-16 characters and must not include any spaces or special characters!"
-            pattern="^[A-Za-z0-9]{3,16}$"
-            type="text"
-            placeholder="Username"
-            name="username"
-            required={true}
-            value={values.username}
-            onChange={handleInputChange}
-          />
-          <div className={styles.selectContainer}>
-            <select
-              value={values.gender}
-              onChange={handleInputChange}
-              name="gender"
-              id="gender"
+          <CardBody className="space-y-4">
+            <Field label="Full Name" required>
+              <Input
+                icon={User}
+                type="text"
+                placeholder="e.g. John Doe"
+                name="name"
+                required
+                value={values.name}
+                onChange={handleInputChange}
+              />
+            </Field>
+
+            <Field label="Username" required hint="3-16 characters, alphanumeric, no spaces">
+              <Input
+                icon={ShieldCheck}
+                pattern="^[A-Za-z0-9]{3,16}$"
+                type="text"
+                placeholder="Username"
+                name="username"
+                required
+                value={values.username}
+                onChange={handleInputChange}
+              />
+            </Field>
+
+            <Field label="Gender" required>
+              <Select
+                value={values.gender}
+                onChange={handleInputChange}
+                name="gender"
+                id="gender"
+                required
+              >
+                <option value="" disabled hidden>
+                  Select gender
+                </option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </Select>
+            </Field>
+
+            <Field
+              label="Password"
               required
-              placeholder="Gender"
+              hint="8-20 characters, min 1 number & 1 letter, no spaces"
             >
-              <option value="" disabled>
-                Gender
-              </option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </div>
-          <FormInput
-            label=""
-            errMes="Password should be 8-20 characters and must not include spaces, and include at least 1 number, 1 letter."
-            type="password"
-            pattern="^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,20}$"
-            placeholder="Password"
-            name="password"
-            required={true}
-            value={values.password}
-            onChange={handleInputChange}
-          />
-          <FormInput
-            errMes="Please let Passwords match"
-            label=""
-            type="password"
-            placeholder="Confirm Password"
-            name="confirmPassword"
-            required={true}
-            pattern={values.password}
-            value={values.confirmPassword}
-            onChange={handleInputChange}
-          />
-          <div className={styles.btnContainer}>
-            <button
-              disabled={loading}
-              className={loading ? styles.disabled : ""}
-            >
-              {loading ? "Adding..." : "Register"}
-            </button>
-          </div>
-        </div>
+              <Input
+                icon={Key}
+                type="password"
+                pattern="^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,20}$"
+                placeholder="Password"
+                name="password"
+                required
+                value={values.password}
+                onChange={handleInputChange}
+              />
+            </Field>
+
+            <Field label="Confirm Password" required hint="Re-enter password to confirm match">
+              <Input
+                icon={Lock}
+                type="password"
+                placeholder="Confirm Password"
+                name="confirmPassword"
+                required
+                pattern={values.password ? `^${values.password}$` : undefined}
+                value={values.confirmPassword}
+                onChange={handleInputChange}
+              />
+            </Field>
+
+            <div className="pt-4 flex justify-end">
+              <Button
+                type="submit"
+                disabled={loading}
+                variant="primary"
+                icon={UserPlus}
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                {loading ? "Registering..." : "Register User"}
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
       </form>
     </div>
   );

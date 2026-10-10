@@ -1,11 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import styles from "./task.module.css";
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
 import Image from "next/image";
 import axios from "axios";
+import { signOut, useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
+import { ArrowLeft, CheckSquare } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
 
 const AllUser = () => {
@@ -15,106 +18,136 @@ const AllUser = () => {
   const { data: session, status: sessionStatus } = useSession();
 
   useEffect(() => {
+    let active = true;
     const fetchUsers = async () => {
       setLoading(true);
       try {
         const { data } = await axios.get(`/api/teacher/${session.schoolId}`);
-        setUsers(data);
+        if (active) setUsers(data || []);
       } catch (err) {
-        console.log(err);
+        console.error("Error fetching teachers:", err);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
-    fetchUsers();
+    if (session?.schoolId) {
+      fetchUsers();
+    }
+    return () => {
+      active = false;
+    };
   }, [session?.schoolId]);
 
   useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      if (session.role !== "ADMIN") {
-        signOut();
-        redirect("/");
-      }
+    if (sessionStatus === "authenticated" && session?.role !== "ADMIN") {
+      signOut({ redirect: false }).then(() => redirect("/"));
     }
   }, [sessionStatus, session]);
-  if (sessionStatus == "loading" || loading == true)
+
+  if (sessionStatus === "loading") {
     return (
-      <h1 className="waitH1">
+      <div className="flex min-h-48 items-center justify-center gap-3 text-ink-500">
         <Spinner /> Please wait...
-      </h1>
+      </div>
     );
+  }
 
   if (sessionStatus !== "authenticated") redirect("/");
 
   return (
-    <div className={styles.allUser}>
-      <h1>Check Task</h1>
-      <div className={styles.tableContainer}>
-        {users.length > 0 ? (
-          <table className={styles.table} border={3}>
-            <thead>
+    <div>
+      <PageHeader
+        dark={false}
+        title="Check Tasks"
+        subtitle="Select a teacher to review their assigned online tasks and student submissions."
+        action={
+          <Button as={Link} href="/admin" variant="outline" icon={ArrowLeft}>
+            Dashboard
+          </Button>
+        }
+      />
+
+      <Card>
+        <CardBody className="overflow-x-auto p-0">
+          <table className="min-w-full text-left text-sm">
+            <thead className="border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
               <tr>
-                <th>No</th>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Gender</th>
-                <th className={styles.createdDate}>Added on</th>
-                <th>Action</th>
+                <th className="px-4 py-3">No</th>
+                <th className="px-4 py-3">Image</th>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Gender</th>
+                <th className="px-4 py-3">Added on</th>
+                <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
             {loading ? (
-              <h3>Loading...</h3>
-            ) : (
               <tbody>
+                <tr>
+                  <td colSpan="7" className="px-5 py-10 text-center text-ink-400">
+                    Loading teachers...
+                  </td>
+                </tr>
+              </tbody>
+            ) : (
+              <tbody className="divide-y divide-ink-100">
                 {users.map((user, index) => (
-                  <tr key={user.id}>
-                    <td>{index + 1}</td>
-                    <td className={styles.user}>
+                  <tr key={user.id} className="hover:bg-ink-50/60">
+                    <td className="px-4 py-3 text-ink-500">{index + 1}</td>
+                    <td className="px-4 py-3">
                       <Image
                         src={user.imageUrl || "/img/noAvatar.png"}
-                        alt="img"
+                        alt={user.name || "Teacher"}
                         width={45}
                         height={45}
-                        className={styles.userImg}
+                        className="h-10 w-10 rounded-full object-cover"
                       />
                     </td>
-                    <td>{user.name}</td>
-                    <td>{user.role}</td>
-                    <td>{user.gender}</td>
-                    <td className={styles.createdDate}>
-                      {new Date(user.createdAt).toLocaleString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: true,
-                      })}
+                    <td className="px-4 py-3 font-medium text-ink-900">{user.name || "—"}</td>
+                    <td className="px-4 py-3 text-ink-600">{user.role || "—"}</td>
+                    <td className="px-4 py-3 text-ink-600">{user.gender || "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-ink-500">
+                      {user.createdAt
+                        ? new Date(user.createdAt).toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: true,
+                          })
+                        : "—"}
                     </td>
-                    <td>
-                      <button>
-                        <Link
-                          className={styles.link}
-                          href={`/admin/task/${user.id}`}
-                        >
-                          Check
-                        </Link>
-                      </button>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <Button
+                        as={Link}
+                        href={`/admin/task/${user.id}`}
+                        variant="secondary"
+                        size="sm"
+                        icon={CheckSquare}
+                      >
+                        Check Tasks
+                      </Button>
                     </td>
                   </tr>
                 ))}
+                {!users.length && (
+                  <tr>
+                    <td colSpan="7" className="px-5 py-10 text-center text-ink-400">
+                      No teachers found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             )}
           </table>
-        ) : (
-          <h1>No teacher found</h1>
-        )}
-      </div>
+        </CardBody>
+      </Card>
     </div>
   );
 };
 
 export default AllUser;
+

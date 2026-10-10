@@ -40,7 +40,7 @@ const PaymentDisplay = () => {
       };
       fetchSchoolData();
     }
-  }, [session.schoolId]);
+  }, [session?.schoolId]);
 
   useEffect(() => {
     if (sessionStatus === "authenticated" && session.role !== "ACCOUNTANT") {
@@ -89,7 +89,7 @@ const PaymentDisplay = () => {
 
   return (
     <div className={styles.payment}>
-      <h1>View Student Payments</h1>
+      <h1 className="text-white">View Student Payments</h1>
 
       <div className={styles.selectContainer}>
         <select value={termType} onChange={handleTermChange}>

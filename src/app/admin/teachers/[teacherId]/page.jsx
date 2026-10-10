@@ -1,180 +1,78 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import styles from "../AllTeachers.module.css";
-import { useRouter } from "next/navigation";
-import { FileUploader } from "@/utils/FileUploader/FileUploader";
-import { useUploadThing } from "@/utils/uploadthing";
-import imageCompression from "browser-image-compression";
-import axios from "axios";
-import Spinner from "@/components/Spinner/Spinner";
 
-const EditUser = ({ params }) => {
-  const { teacherId } = params;
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import imageCompression from "browser-image-compression";
+import { useUploadThing } from "@/utils/uploadthing";
+import { ArrowLeft, Save } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
+import Spinner from "@/components/Spinner/Spinner";
+import { FileUploader } from "@/utils/FileUploader/FileUploader";
+
+export default function EditTeacher({ params }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
-  const [selectedClasses, setSelectedClasses] = useState([]);
-  const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { startUpload } = useUploadThing("imageUploader");
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const { data } = await axios.get(`/api/users/${teacherId}`);
+    axios.get(`/api/users/${params.teacherId}`).then(({ data }) => {
       setUser(data);
-      setImageUrl(data.imageUrl);
-    };
-    fetchUserData();
-  }, [teacherId]);
+      setImageUrl(data.imageUrl || "");
+    });
+  }, [params.teacherId]);
 
-  const handleUpdateUser = async () => {
+  function updateField(event) {
+    const { name, value } = event.target;
+    setUser((current) => ({ ...current, [name]: name === "username" || name === "password" ? value.replace(/\s/g, "") : value }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
     setLoading(true);
     try {
       let uploadedImageUrl = imageUrl;
-
-      if (files.length > 0) {
-        const compressedFiles = await Promise.all(
-          files.map(async (file) => {
-            // Compress the image
-            let compressedFile = await imageCompression(file, {
-              maxSizeMB: 1, // Maximum size of 1 MB
-              maxWidthOrHeight: 1024, // Resize dimensions
-              useWebWorker: true,
-            });
-
-            // Check if the compressed file size exceeds 1 MB and compress again if necessary
-            while (compressedFile.size > 1 * 1024 * 1024) {
-              compressedFile = await imageCompression(compressedFile, {
-                maxSizeMB: 1,
-                maxWidthOrHeight: 1024,
-                useWebWorker: true,
-              });
-            }
-            return compressedFile;
-          })
-        );
-
-        const uploadedImages = await startUpload(compressedFiles);
-        if (!uploadedImages) {
-          alert("Image upload failed. Please try again.");
-          setLoading(false);
-          return;
-        }
-        uploadedImageUrl = uploadedImages[0].url;
+      if (files.length) {
+        const compressed = await Promise.all(files.map((file) => imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true })));
+        const uploaded = await startUpload(compressed);
+        if (!uploaded?.length) throw new Error("Image upload failed");
+        uploadedImageUrl = uploaded[0].url;
       }
-
-      const updatedData = {
-        username: user.username,
-        password: user.password,
-        role: user.role,
-        name: user.name,
-        gender: user.gender,
-        classes: selectedClasses,
-        subjects: selectedSubjects,
-        imageUrl: uploadedImageUrl,
-      };
-
-      const { data } = await axios.patch(`/api/users/${teacherId}`, {
-        otherFields: updatedData,
-        newClasses: selectedClasses,
-        newSubjects: selectedSubjects,
-      });
-
-      if (files.length > 0) {
-        await axios.post("/api/img", {
-          username: user.username,
-          imageUrl: uploadedImageUrl,
-        });
-      }
-
+      const fields = { username: user.username, password: user.password, role: user.role, name: user.name, gender: user.gender, classes: user.classes || [], subjects: user.subjects || [], imageUrl: uploadedImageUrl };
+      const { data } = await axios.patch(`/api/users/${params.teacherId}`, { otherFields: fields, newClasses: fields.classes, newSubjects: fields.subjects });
+      if (files.length) await axios.post("/api/img", { username: user.username, imageUrl: uploadedImageUrl });
       alert(data.message);
-      router.push("/admin/users");
-    } catch (err) {
-      console.log(err);
-      alert("Error When Updating");
+      router.push("/admin/teachers");
+    } catch (error) {
+      console.error(error);
+      alert("Error when updating teacher");
     } finally {
       setLoading(false);
     }
-  };
-
-  if (!user) {
-    return (
-      <h1 className="waitH1">
-        <Spinner /> Please wait...
-      </h1>
-    );
   }
 
+  if (!user) return <div className="flex min-h-48 items-center justify-center gap-3 text-ink-500"><Spinner /> Loading teacher...</div>;
+
   return (
-    <div className={styles.singleUser}>
-      <div className={styles.div1}>
-        <h2>Class Teacher of {user?.teacherOf}</h2>
-        <div className={styles.container}>
-          <div className={styles.allInput}>
-            <label>Username:</label>
-            <input
-              type="text"
-              value={user.username}
-              onChange={(e) =>
-                setUser({
-                  ...user,
-                  username: e.target.value.replace(/\s/g, ""),
-                })
-              }
-            />
-            <label>Password::</label>
-            <input
-              type="text"
-              value={user.password}
-              onChange={(e) =>
-                setUser({
-                  ...user,
-                  password: e.target.value.replace(/\s/g, ""),
-                })
-              }
-            />
-            <label>Role:</label>
-            <select
-              value={user.role}
-              onChange={(e) => setUser({ ...user, role: e.target.value })}
-            >
-              <option value="USER">USER</option>
-              <option value="ACCOUNTANT">ACCOUNTANT</option>
-              <option value="ADMIN">ADMIN</option>
-            </select>
-            <label>Name:</label> {/* Name field */}
-            <input
-              type="text"
-              value={user.name}
-              onChange={(e) => setUser({ ...user, name: e.target.value })}
-            />
-            <label>Gender:</label> {/* Gender field */}
-            <select
-              value={user.gender}
-              onChange={(e) => setUser({ ...user, gender: e.target.value })}
-            >
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-        </div>
-        <FileUploader
-          onFieldChange={(url) => setImageUrl(url)}
-          imageUrl={imageUrl}
-          setFiles={setFiles}
-        />
-        <button
-          className={loading && styles.disabled}
-          onClick={handleUpdateUser}
-          disabled={loading}
-        >
-          {loading ? "Loading..." : "Update"}
-        </button>
-      </div>
+    <div>
+      <PageHeader dark={false} title="Edit teacher" subtitle={`Update ${user.name || "teacher"}'s account details.`} action={<Button as="a" href="/admin/teachers" variant="outline" icon={ArrowLeft}>Back</Button>} />
+      <Card className="max-w-3xl"><CardBody><form onSubmit={handleSubmit} className="grid gap-5 sm:grid-cols-2">
+        <Field label="Username" htmlFor="username"><Input id="username" name="username" value={user.username || ""} onChange={updateField} required /></Field>
+        <Field label="Password" htmlFor="password"><Input id="password" name="password" value={user.password || ""} onChange={updateField} required /></Field>
+        <Field label="Name" htmlFor="name"><Input id="name" name="name" value={user.name || ""} onChange={updateField} required /></Field>
+        <Field label="Role" htmlFor="role"><Select id="role" name="role" value={user.role || "USER"} onChange={updateField}><option value="USER">Teacher</option><option value="ACCOUNTANT">Accountant</option><option value="ADMIN">Admin</option></Select></Field>
+        <Field label="Gender" htmlFor="gender"><Select id="gender" name="gender" value={user.gender || ""} onChange={updateField}><option value="" disabled>Select gender</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></Select></Field>
+        <div className="sm:col-span-2"><p className="mb-1.5 text-sm font-medium text-ink-700">Profile image</p><FileUploader imageUrl={imageUrl} onFieldChange={setImageUrl} setFiles={setFiles} /></div>
+        <Button type="submit" disabled={loading} icon={Save} className="sm:col-span-2 sm:justify-self-start">{loading ? "Updating..." : "Save changes"}</Button>
+      </form></CardBody></Card>
     </div>
   );
-};
-
-export default EditUser;
+}

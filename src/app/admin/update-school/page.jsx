@@ -1,10 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import styles from "./updateSchool.module.css";
 import { useSession, signOut } from "next-auth/react";
 import { format, parse, parseISO } from "date-fns";
 import Spinner from "@/components/Spinner/Spinner";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Textarea from "@/components/ui/Textarea";
+import Button from "@/components/ui/Button";
+import { useSonner } from "@/lib/useSonner";
+
 
 const UpdateSchool = () => {
   const defaultTerms = [
@@ -48,6 +56,7 @@ const UpdateSchool = () => {
   });
 
   const { data: session, status: sessionStatus } = useSession();
+    const { customSonner } = useSonner();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -179,7 +188,10 @@ const UpdateSchool = () => {
         `/api/school/${session.schoolId}`,
         updatedData,
       );
-      alert(data.message);
+      customSonner({
+        type: "success",
+        text: data.message,
+      });
     } catch (err) {
       console.log(err.message);
     } finally {
@@ -203,77 +215,72 @@ const UpdateSchool = () => {
   ];
 
   return (
-    <div className={styles.container}>
-      <h2>Edit School Information</h2>
-      <form onSubmit={handleSubmit} className={styles.schoolForm}>
-        <div className={styles.formGroup}>
-          <label htmlFor="principal">Principal Name</label>
-          <input
+    <div>
+      <PageHeader title="Update school" subtitle="Keep your school profile and term settings current." dark={false} />
+      <Card className="max-w-3xl"> 
+        <CardBody>
+          <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-2">
+            <Field label="Principal name" htmlFor="principal">
+              <Input
             type="text"
             id="principal"
             name="principal"
             value={formData.principal}
             onChange={handleChange}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="headmaster">Headmaster Name</label>
-          <input
+              />
+            </Field>
+            <Field label="Headmaster name" htmlFor="headmaster">
+              <Input
             type="text"
             id="headmaster"
             name="headmaster"
             value={formData.headmaster}
             onChange={handleChange}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="address">Address</label>
-          <textarea
+              />
+            </Field>
+            <Field label="Address" htmlFor="address" className="lg:col-span-2">
+              <Textarea
             id="address"
             name="address"
             value={formData.address}
             onChange={handleChange}
             required
-          ></textarea>
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="contactEmail">Contact Email</label>
-          <input
+              />
+            </Field>
+            <Field label="Contact email" htmlFor="contactEmail">
+              <Input
             type="email"
             id="contactEmail"
             name="contactEmail"
             value={formData.contactEmail}
             onChange={handleChange}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="phoneNumber">Phone Number</label>
-          <input
+              />
+            </Field>
+            <Field label="Phone number" htmlFor="phoneNumber">
+              <Input
             type="tel"
             id="phoneNumber"
             name="phoneNumber"
             value={formData.phoneNumber}
             onChange={handleChange}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="motto">Motto</label>
-          <input
+              />
+            </Field>
+            <Field label="Motto" htmlFor="motto" className="lg:col-span-2">
+              <Input
             type="text"
             id="motto"
             name="motto"
             value={formData.motto}
             onChange={handleChange}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="termType">Select Current Term</label>
-          <select
+              />
+            </Field>
+            <Field label="Current term" htmlFor="termType">
+              <Select
             id="termType"
             name="termType"
             value={formData.termType}
             onChange={handleChange}
-          >
+              >
             <option value="" disabled>
               Select Term
             </option>
@@ -284,44 +291,40 @@ const UpdateSchool = () => {
                 Term
               </option>
             ))}
-          </select>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="termBegins">Term Begins</label>{" "}
-          <input
+              </Select>
+            </Field>
+            <Field label="Term begins" htmlFor="termBegins">
+              <Input
             type="date"
             id="termBegins"
             name="termBegins"
             value={formData.termBegins}
             onChange={handleChange}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="termEnds">Term Ended</label>
-          <input
+              />
+            </Field>
+            <Field label="Term ends" htmlFor="termEnds">
+              <Input
             type="date"
             id="termEnds"
             name="termEnds"
             value={formData.termEnds}
             onChange={handleChange}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="nextTermBegin">Next Term Begins</label>
-          <input
+              />
+            </Field>
+            <Field label="Next term begins" htmlFor="nextTermBegin">
+              <Input
             type="date"
             id="nextTermBegin"
             name="nextTermBegin"
             value={formData.nextTermBegin}
             onChange={handleChange}
-          />
-        </div>
-        <div>
-          <label>Select Input Fields</label>
-          <div className={styles.checkboxItems}>
+              />
+            </Field>
+            <fieldset className="lg:col-span-2">
+              <legend className="mb-2 text-sm font-medium text-ink-700">Select input fields</legend>
+              <div className="grid grid-cols-2 gap-3 rounded-xl border border-ink-100 bg-ink-50 p-4 sm:grid-cols-3 lg:grid-cols-4">
             {checkboxItems.map((item) => (
-              <div key={item}>
+              <label key={item} className="flex items-center gap-2 text-sm text-ink-600">
                 <input
                   type="checkbox"
                   id={item}
@@ -329,16 +332,18 @@ const UpdateSchool = () => {
                   checked={formData.input.includes(item)}
                   onChange={handleChange}
                 />
-                <label htmlFor={item}>{item}</label>
-              </div>
+                <span>{item}</span>
+              </label>
             ))}
-          </div>
-        </div>
+              </div>
+            </fieldset>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Updating..." : "Update School"}
-        </button>
-      </form>
+            <Button type="submit" disabled={loading} className="lg:col-span-2 lg:justify-self-start">
+              {loading ? "Updating..." : "Update school"}
+            </Button>
+          </form>
+        </CardBody>
+      </Card>
     </div>
   );
 };

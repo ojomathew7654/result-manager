@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npx prisma validate && npx prisma generate && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -16,7 +16,9 @@
     "browser-image-compression": "^2.0.2",
     "chart.js": "^4.4.3",
     "chartjs-plugin-datalabels": "^2.2.0",
+    "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "lucide-react": "^1.46.0",
     "next": "14.2.4",
     "next-auth": "^4.24.7",
     "react": "^18",
@@ -24,12 +26,17 @@
     "react-dom": "^18",
     "react-icons": "^5.2.1",
     "react-to-print": "^2.15.1",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.0",
     "uploadthing": "^6.13.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "autoprefixer": "^10.4.19",
     "eslint": "^8",
     "eslint-config-next": "14.2.4",
-    "prisma": "^5.16.1"
+    "postcss": "^8.4.39",
+    "prisma": "^5.16.1",
+    "tailwindcss": "^3.4.6"
   }
 }

@@ -1,17 +1,26 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import styles from "./task.module.css";
 import { useSession } from "next-auth/react";
-import TaskComponent from "@/components/taskComponent/TaskComponent";
 import { format } from "date-fns";
-import { FileUploaderArray } from "@/utils/FileUploader/FileUploader";
 import imageCompression from "browser-image-compression";
 import { useUploadThing } from "@/utils/uploadthing";
-import { IoCloudUploadOutline } from "react-icons/io5";
+import { FileUploaderArray } from "@/utils/FileUploader/FileUploader";
+import { Plus, Trash2, Upload, Check } from "lucide-react";
+
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
 import Spinner from "@/components/Spinner/Spinner";
+import TaskComponent from "@/components/taskComponent/TaskComponent";
+import { useSonner } from "@/lib/useSonner";
 
 const TeacherTask = () => {
+  const { customSonner } = useSonner();
   const [taskDetails, setTaskDetails] = useState({
     instructions: "",
     givenDate: "",
@@ -37,6 +46,16 @@ const TeacherTask = () => {
   const [imageUrls, setImageUrls] = useState([]);
   const [files, setFiles] = useState([]);
 
+  const fetchAssignments = React.useCallback(async () => {
+    if (!session?.userId) return;
+    try {
+      const { data } = await axios.get(`/api/assignments/${session.userId}`);
+      setAssignments(data || []);
+    } catch (err) {
+      console.error("Error fetching assignments:", err);
+    }
+  }, [session?.userId]);
+
   useEffect(() => {
     const fetchSchoolData = async () => {
       try {
@@ -51,19 +70,21 @@ const TeacherTask = () => {
       fetchSchoolData();
       fetchAssignments();
     }
-  }, [session]);
+  }, [session, fetchAssignments]);
 
-  const fetchAssignments = async () => {
-    const { data } = await axios.get(`/api/assignments/${session.userId}`);
-    setAssignments(data);
-  };
   const handleDeleteAssignment = async (id) => {
     if (!window.confirm("Are you sure you want to delete this assignment?"))
       return;
-    const { data } = await axios.delete(`/api/assignments/${id}`);
-    alert(data.message);
-    setAssignments(assignments.filter((ass) => ass.id !== id));
+    try {
+      const { data } = await axios.delete(`/api/assignments/${id}`);
+      customSonner({ type: "success", text: data.message });
+      setAssignments(assignments.filter((ass) => ass.id !== id));
+    } catch (err) {
+      console.error(err);
+      customSonner({ type: "error", text: "Error deleting assignment." });
+    }
   };
+
   const handleScoreChange = (index, value) => {
     const updatedScores = [...scores];
     updatedScores[index] = value;
@@ -73,9 +94,8 @@ const TeacherTask = () => {
   const handleEditAssignment = (assignment) => {
     setEditMode(true);
     setEditAssignmentId(assignment.id);
-
     setEditAssignment(assignment);
-    scrollRef?.current?.scrollIntoView({ behaviour: "smooth" });
+    scrollRef?.current?.scrollIntoView({ behavior: "smooth" });
 
     setTaskDetails({
       instructions: assignment.instructions,
@@ -90,7 +110,7 @@ const TeacherTask = () => {
 
   const generateTitle = () => {
     if (editMode && editAssignmentId) {
-      return editAssignment.title || "Assignment Title will appear here";
+      return editAssignment?.title || "Assignment Title will appear here";
     }
 
     if (!editMode && selectedClass && selectedSubject && taskDetails.type) {
@@ -103,21 +123,12 @@ const TeacherTask = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setTaskDetails({ ...taskDetails, [name]: value });
-    if (e.target.tagName === "TEXTAREA") {
-      e.target.style.height = "auto";
-      e.target.style.height = `${e.target.scrollHeight}px`;
-    }
   };
 
   const handleQuestionChange = (index, value) => {
     const updatedQuestions = [...taskDetails.questions];
     updatedQuestions[index] = value;
     setTaskDetails({ ...taskDetails, questions: updatedQuestions });
-    const textArea = document.getElementById(`question-${index}`);
-    if (textArea) {
-      textArea.style.height = "auto";
-      textArea.style.height = `${textArea.scrollHeight}px`;
-    }
   };
 
   const handleSubjectChange = (e) => {
@@ -133,22 +144,16 @@ const TeacherTask = () => {
       ...taskDetails,
       questions: [...taskDetails.questions, ""],
     });
+    setScores([...scores, ""]);
   };
 
   const removeQuestionField = () => {
     if (taskDetails.questions.length > 1) {
       const updatedQuestions = taskDetails.questions.slice(0, -1);
       setTaskDetails({ ...taskDetails, questions: updatedQuestions });
+      setScores(scores.slice(0, -1));
     }
   };
-
-  useEffect(() => {
-    const textAreas = document.querySelectorAll("textarea");
-    textAreas.forEach((textarea) => {
-      textarea.style.height = "auto"; // Reset the height
-      textarea.style.height = `${textarea.scrollHeight}px`; // Set height to match content
-    });
-  }, [taskDetails]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -158,9 +163,7 @@ const TeacherTask = () => {
     try {
       let uploadedImagesUrls = [];
 
-      // Check if there are files to upload
       if (files && files.length > 0) {
-        // Compress each file individually
         const compressedFiles = await Promise.all(
           files.map(async (file) => {
             let compressedFile = await imageCompression(file, {
@@ -179,17 +182,17 @@ const TeacherTask = () => {
           })
         );
 
-        // Upload each compressed file and get URLs
         for (const compressedFile of compressedFiles) {
-          const uploadedImages = await startUpload([compressedFile]); // Upload one at a time
+          const uploadedImages = await startUpload([compressedFile]);
           if (!uploadedImages || uploadedImages.length === 0) {
-            alert("Image upload failed. Please try again.");
+            customSonner({ type: "error", text: "Image upload failed. Please try again." });
             setLoading(false);
             return;
           }
-          uploadedImagesUrls.push(uploadedImages[0].url); // Append each URL
+          uploadedImagesUrls.push(uploadedImages[0].url);
         }
       }
+
       const assignmentData = {
         ...taskDetails,
         scores,
@@ -216,8 +219,8 @@ const TeacherTask = () => {
         data = response.data;
       }
 
-      alert(data.message);
-      // Reset form fields
+      customSonner({ type: "success", text: data.message });
+
       setTaskDetails({
         instructions: "",
         givenDate: "",
@@ -233,7 +236,7 @@ const TeacherTask = () => {
       await fetchAssignments();
     } catch (err) {
       console.error(err);
-      alert("Error when submitting assignment.");
+      customSonner({ type: "error", text: "Error when submitting assignment." });
     } finally {
       setLoading(false);
     }
@@ -254,223 +257,257 @@ const TeacherTask = () => {
     return null;
   }
 
-  if (sessionStatus === "loading")
+  if (sessionStatus === "loading") {
     return (
-      <h1 className="waitH1">
-        <Spinner /> Please wait...
-      </h1>
-    );
-  if (sessionStatus !== "authenticated") redirect("/");
-  return (
-    <>
-      <div ref={scrollRef} className={styles.teacherTask}>
-        <h2>{editMode ? "Edit Assignment" : "Create New Assignment"}</h2>
-
-        {assignments.length >= 30 ? (
-          <h1>
-            Do you still want to create new assignment? <br />
-            You can not create more than 30 assignments at a time, you need to
-            delete some existing one.
-          </h1>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className={styles.generatedTitle}>
-              <h4 className={styles.title}>Title: {generateTitle()}</h4>
-            </div>
-
-            <div className={styles.div1}>
-              <p>
-                <label htmlFor="classSelect">Select Class:</label>
-                <select
-                  id="classSelect"
-                  value={selectedClass}
-                  onChange={handleClassChange}
-                  required
-                >
-                  {!selectedClass && (
-                    <option value="" disabled>
-                      Select class
-                    </option>
-                  )}
-                  {selectedClass ? (
-                    <option key={selectedClass} value={selectedClass}>
-                      {selectedClass}
-                    </option>
-                  ) : (
-                    session?.classes?.map((classItem) => (
-                      <option key={classItem} value={classItem}>
-                        {classItem}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </p>
-              <p>
-                <label htmlFor="subjectSelect">Select Subject:</label>
-                <select
-                  id="subjectSelect"
-                  value={selectedSubject}
-                  onChange={handleSubjectChange}
-                  required
-                >
-                  {!getSubject() && (
-                    <option value="" disabled>
-                      Select subject
-                    </option>
-                  )}
-                  {getSubject() ? (
-                    <option key={getSubject()} value={getSubject()}>
-                      {getSubject()}
-                    </option>
-                  ) : (
-                    session.subjects?.map((subject) => (
-                      <option key={subject} value={subject}>
-                        {subject}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </p>
-              <p>
-                <label htmlFor="type">Assignment Type:</label>
-                <select
-                  id="type"
-                  name="type"
-                  value={taskDetails.type}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="">Please Select</option>
-                  <option value="ASSIGNMENT">Assignment</option>
-                  <option value="MID_TERM_ASSIGNMENT">
-                    Mid Term Assignment
-                  </option>
-                  <option value="HOLIDAY_ASSIGNMENT">Holiday Assignment</option>
-                  <option value="PROJECT">Project</option>
-                  <option value="HOLIDAY_PROJECT">Holiday Project</option>
-                </select>
-              </p>
-              <p>
-                <label htmlFor="givenDate">Given Date:</label>
-                <input
-                  id="givenDate"
-                  type="date"
-                  name="givenDate"
-                  value={taskDetails.givenDate}
-                  onChange={handleInputChange}
-                  required
-                />
-              </p>
-
-              {/* Submission Date */}
-              <p>
-                <label htmlFor="submissionDate">Submission Date:</label>
-                <input
-                  id="submissionDate"
-                  type="date"
-                  name="submissionDate"
-                  value={taskDetails.submissionDate}
-                  onChange={handleInputChange}
-                  required
-                />
-              </p>
-            </div>
-
-            <div className={styles.div2}>
-              <p>
-                <label htmlFor="instructions">Instructions:</label>
-                <textarea
-                  id="instructions"
-                  name="instructions"
-                  placeholder="Give instructions"
-                  value={taskDetails.instructions}
-                  onChange={(e) => {
-                    handleInputChange(e);
-                  }}
-                  required
-                />
-              </p>
-              <div className={styles.questions}>
-                <h4>Questions:</h4>
-
-                {taskDetails.questions.map((question, index) => (
-                  <div key={index}>
-                    <p>
-                      <label htmlFor={`question-${index}`}>
-                        Question {index + 1}:
-                      </label>
-                      <textarea
-                        id={`question-${index}`}
-                        value={question}
-                        onChange={(e) => {
-                          handleQuestionChange(index, e.target.value);
-                        }}
-                        placeholder={`Question ${index + 1}`}
-                        required
-                      />
-                    </p>
-                    <p>
-                      <label htmlFor={`score-${index}`}>
-                        Mark for Question {index + 1}:
-                      </label>
-                      <input
-                        type="number"
-                        id={`score-${index}`}
-                        value={scores[index] || ""}
-                        placeholder="Mark"
-                        onChange={(e) =>
-                          handleScoreChange(index, e.target.value)
-                        }
-                        min="0"
-                        max="100"
-                        required
-                      />
-                    </p>
-                  </div>
-                ))}
-
-                <button type="button" onClick={addQuestionField}>
-                  Add Another Question
-                </button>
-
-                {taskDetails.questions.length > 1 && (
-                  <button
-                    className={styles.lastQuestion}
-                    type="button"
-                    onClick={removeQuestionField}
-                  >
-                    Remove Last Question
-                  </button>
-                )}
-                <button type="button" onClick={() => setUpload(!upload)}>
-                  <IoCloudUploadOutline />
-                  {"  "}
-                  {!upload ? "Upload image" : " Don't upload image"}
-                </button>
-              </div>
-            </div>
-            {upload ? (
-              <FileUploaderArray
-                imageUrls={imageUrls}
-                onFieldChange={setImageUrls}
-                setFiles={setFiles}
-              />
-            ) : (
-              ""
-            )}
-
-            <div className={styles.btnContainer}>
-              <button
-                disabled={loading}
-                className={loading ? styles.disabled : ""}
-                type="submit"
-              >
-                {loading ? "Submitting..." : "Submit Assignment"}
-              </button>
-            </div>
-          </form>
-        )}
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spinner />
+        <p className="text-sm font-medium text-ink-500">Please wait...</p>
       </div>
+    );
+  }
+
+  if (sessionStatus !== "authenticated") redirect("/");
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 p-6" ref={scrollRef}>
+      <PageHeader
+        title="Task & Assignment Creator"
+        subtitle="Manage online homework, projects, and assignments for your classes."
+      />
+
+      {/* Form Card */}
+      {assignments.length >= 30 ? (
+        <Card>
+          <CardBody className="py-8 text-center text-rose-600">
+            <h3 className="text-base font-bold">Assignment Limit Reached (30 Tasks)</h3>
+            <p className="mt-1 text-xs text-ink-500">
+              You cannot create more than 30 assignments at a time. Please delete existing assignments to create a new one.
+            </p>
+          </CardBody>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader
+            title={editMode ? "Edit Assignment" : "Create New Assignment"}
+            subtitle={
+              <span className="font-semibold text-brand-600">
+                Generated Title: {generateTitle()}
+              </span>
+            }
+          />
+          <CardBody className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Section 1: Basic Filters */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                <Field label="Select Class" required>
+                  <Select
+                    value={selectedClass}
+                    onChange={handleClassChange}
+                    required
+                  >
+                    {!selectedClass && (
+                      <option value="" disabled>
+                        Select class
+                      </option>
+                    )}
+                    {selectedClass ? (
+                      <option key={selectedClass} value={selectedClass}>
+                        {selectedClass}
+                      </option>
+                    ) : (
+                      session?.classes?.map((classItem) => (
+                        <option key={classItem} value={classItem}>
+                          {classItem}
+                        </option>
+                      ))
+                    )}
+                  </Select>
+                </Field>
+
+                <Field label="Select Subject" required>
+                  <Select
+                    value={selectedSubject}
+                    onChange={handleSubjectChange}
+                    required
+                  >
+                    {!getSubject() && (
+                      <option value="" disabled>
+                        Select subject
+                      </option>
+                    )}
+                    {getSubject() ? (
+                      <option key={getSubject()} value={getSubject()}>
+                        {getSubject()}
+                      </option>
+                    ) : (
+                      session?.subjects?.map((subject) => (
+                        <option key={subject} value={subject}>
+                          {subject}
+                        </option>
+                      ))
+                    )}
+                  </Select>
+                </Field>
+
+                <Field label="Assignment Type" required>
+                  <Select
+                    name="type"
+                    value={taskDetails.type}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    <option value="ASSIGNMENT">Assignment</option>
+                    <option value="MID_TERM_ASSIGNMENT">Mid Term Assignment</option>
+                    <option value="HOLIDAY_ASSIGNMENT">Holiday Assignment</option>
+                    <option value="PROJECT">Project</option>
+                    <option value="HOLIDAY_PROJECT">Holiday Project</option>
+                  </Select>
+                </Field>
+
+                <Field label="Given Date" required>
+                  <Input
+                    type="date"
+                    name="givenDate"
+                    value={taskDetails.givenDate}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </Field>
+
+                <Field label="Submission Due Date" required>
+                  <Input
+                    type="date"
+                    name="submissionDate"
+                    value={taskDetails.submissionDate}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </Field>
+              </div>
+
+              {/* Instructions */}
+              <Field label="Instructions" required>
+                <textarea
+                  name="instructions"
+                  placeholder="Enter assignment instructions for students..."
+                  value={taskDetails.instructions}
+                  onChange={handleInputChange}
+                  required
+                  rows={3}
+                  className="w-full rounded-lg border border-ink-200 bg-white p-3 text-sm text-ink-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                />
+              </Field>
+
+              {/* Dynamic Questions & Marks */}
+              <div className="space-y-4 rounded-xl border border-ink-100 bg-ink-50/50 p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-600">
+                  Questions & Mark Allocations
+                </h4>
+
+                <div className="space-y-4">
+                  {taskDetails.questions.map((question, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-1 gap-3 rounded-lg border border-ink-200 bg-white p-3 sm:grid-cols-4"
+                    >
+                      <div className="sm:col-span-3">
+                        <Field label={`Question ${index + 1}`} required>
+                          <textarea
+                            id={`question-${index}`}
+                            value={question}
+                            onChange={(e) => handleQuestionChange(index, e.target.value)}
+                            placeholder={`Enter question ${index + 1}...`}
+                            required
+                            rows={2}
+                            className="w-full rounded-lg border border-ink-200 bg-white p-2.5 text-sm text-ink-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                          />
+                        </Field>
+                      </div>
+
+                      <div className="sm:col-span-1">
+                        <Field label="Max Mark" required>
+                          <Input
+                            type="number"
+                            value={scores[index] || ""}
+                            placeholder="e.g. 10"
+                            onChange={(e) => handleScoreChange(index, e.target.value)}
+                            min="0"
+                            max="100"
+                            required
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      icon={Plus}
+                      onClick={addQuestionField}
+                    >
+                      Add Question
+                    </Button>
+
+                    {taskDetails.questions.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        icon={Trash2}
+                        onClick={removeQuestionField}
+                      >
+                        Remove Last
+                      </Button>
+                    )}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant={upload ? "subtle" : "outline"}
+                    size="sm"
+                    icon={Upload}
+                    onClick={() => setUpload(!upload)}
+                  >
+                    {!upload ? "Attach Image" : "Cancel Image Attachment"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Uploadthing File Attachment Component */}
+              {upload && (
+                <div className="rounded-xl border border-dashed border-brand-300 bg-brand-50/30 p-4">
+                  <FileUploaderArray
+                    imageUrls={imageUrls}
+                    onFieldChange={setImageUrls}
+                    setFiles={setFiles}
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  variant="primary"
+                  icon={Check}
+                  size="lg"
+                  className="w-full sm:w-auto"
+                >
+                  {loading ? "Submitting Assignment..." : editMode ? "Update Assignment" : "Submit Assignment"}
+                </Button>
+              </div>
+            </form>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Existing Assignments List using TaskComponent */}
       <TaskComponent
         teacherPage={true}
         assignments={assignments}
@@ -478,7 +515,7 @@ const TeacherTask = () => {
         handleDeleteAssignment={handleDeleteAssignment}
         handleEditAssignment={handleEditAssignment}
       />
-    </>
+    </div>
   );
 };
 

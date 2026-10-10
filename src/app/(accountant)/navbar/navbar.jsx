@@ -126,7 +126,7 @@ const Navbar = () => {
           <div className={styles.middleBar}>
             <div className={styles.adminContainer}>
               <div className={styles.desktop}>
-                <span>ACCOUNTANT: {session?.name.toUpperCase()} </span>
+                <span className="text-white">ACCOUNTANT: {session?.name.toUpperCase()} </span>
                 <div className={styles.imageContainer}>
                   <Image
                     className={styles.img}

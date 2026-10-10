@@ -120,7 +120,7 @@ const SchoolFeeManager = () => {
 
   return (
     <div className={styles.payment}>
-      <h1>Manage School Fees</h1>
+      <h1 className="text-white">Manage School Fees</h1>
 
       <div className={styles.selectContainer}>
         <select

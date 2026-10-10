@@ -1,12 +1,15 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import styles from "./AllTeachers.module.css";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import axios from "axios";
 import Spinner from "@/components/Spinner/Spinner";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 const AllUser = () => {
   const [users, setUsers] = useState([]);
@@ -68,42 +71,41 @@ const AllUser = () => {
     return 0;
   });
   return (
-    <div className={styles.allUser}>
-      <h1>Our Teachers</h1>
-      <div className={styles.tableContainer}>
+    <div>
+      <PageHeader dark={false} title="Teachers" subtitle="Manage teaching staff in your school." action={<Button as={Link} href="/admin" variant="outline" icon={ArrowLeft}>Dashboard</Button>} />
+      <Card>
+        <CardBody className="overflow-x-auto p-0">
         {users.length > 0 ? (
-          <table className={styles.table} border={3}>
-            <thead>
+          <table className="min-w-full text-left text-sm">
+            <thead className="border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
               <tr>
                 <th>No</th>
                 <th>Image</th>
                 <th>Name</th>
                 <th>Role</th>
                 <th>Gender</th>
-                <th className={styles.createdDate}>Added on</th>
+                <th>Added on</th>
                 <th>Action</th>
               </tr>
             </thead>
-            {loading ? (
-              <h3>Loading...</h3>
-            ) : (
-              <tbody>
+            {loading ? <tbody><tr><td colSpan="7" className="px-5 py-10 text-center text-ink-400">Loading teachers...</td></tr></tbody> : (
+              <tbody className="divide-y divide-ink-100">
                 {users.map((user, index) => (
                   <tr key={user.id}>
                     <td>{index + 1}</td>
-                    <td className={styles.user}>
+                    <td className="px-4 py-3">
                       <Image
                         src={user.imageUrl || "/img/noAvatar.png"}
                         alt="img"
                         width={45}
                         height={45}
-                        className={styles.userImg}
+                        className="h-10 w-10 rounded-full object-cover"
                       />
                     </td>
                     <td>{user.name}</td>
                     <td>{user.role}</td>
                     <td>{user.gender}</td>
-                    <td className={styles.createdDate}>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-ink-500">
                       {new Date(user.createdAt).toLocaleString("en-GB", {
                         day: "2-digit",
                         month: "2-digit",
@@ -115,32 +117,20 @@ const AllUser = () => {
                       })}
                     </td>
 
-                    <td>
-                      <button>
-                        {" "}
-                        <Link
-                          className={styles.link}
-                          href={`/admin/teachers/${user.id}`}
-                        >
-                          Edit
-                        </Link>
-                      </button>
-                      <button
-                        className={styles.delete}
-                        onClick={() => handleDeleteUser(user.id)}
-                      >
-                        Delete
-                      </button>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <Link className="mr-3 font-medium text-brand-700 hover:text-brand-900" href={`/admin/teachers/${user.id}`}>Edit</Link>
+                      <button className="inline-flex items-center gap-1 font-medium text-rose-600 hover:text-rose-800" onClick={() => handleDeleteUser(user.id)}><Trash2 size={14} />Delete</button>
                     </td>
                   </tr>
                 ))}
-              </tbody>
+                  </tbody>
             )}
           </table>
         ) : (
-          <h1>No teacher found</h1>
+              <p className="p-8 text-center text-ink-400">No teachers found.</p>
         )}
-      </div>
+            </CardBody>
+          </Card>
     </div>
   );
 };

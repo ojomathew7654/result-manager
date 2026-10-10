@@ -1,9 +1,20 @@
 "use client";
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import axios from "axios";
-import styles from "./ManualAttendance.module.css";
+import { Save, Calendar, Users, GraduationCap, CheckCircle2 } from "lucide-react";
+
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import Field from "@/components/ui/Field";
+import Select from "@/components/ui/Select";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
+import Spinner from "@/components/Spinner/Spinner";
+import { useSonner } from "@/lib/useSonner";
 
 const ManualAttendance = ({ session }) => {
+  const { customSonner } = useSonner();
   const [students, setStudents] = useState([]);
   const [attendanceData, setAttendanceData] = useState({});
   const [termType, setTermType] = useState("");
@@ -11,20 +22,20 @@ const ManualAttendance = ({ session }) => {
   const [selectedClass, setSelectedClass] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const fetchStudentData = async (termType, selectedClass, academicYear) => {
-    if (!termType || !selectedClass || !academicYear) return;
+  const fetchStudentData = async (term, level, year) => {
+    if (!term || !level || !year) return;
     setLoading(true);
     try {
-      const encodedAcademicYear = encodeURIComponent(academicYear);
+      const encodedAcademicYear = encodeURIComponent(year);
       const { data } = await axios.get(
-        `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+        `/api/student/class/${term}-${session.schoolId}-${encodedAcademicYear}-${level}`
       );
 
-      setStudents(data);
+      setStudents(data || []);
       const initialAttendanceData = {};
-      data.forEach((student) => {
-        const attendance = student.attendanceList.find(
-          (item) => item.termType === termType && item.session === academicYear
+      (data || []).forEach((student) => {
+        const attendance = student.attendanceList?.find(
+          (item) => item.termType === term && item.session === year
         );
         if (attendance) {
           initialAttendanceData[student.id] = {
@@ -36,27 +47,29 @@ const ManualAttendance = ({ session }) => {
       });
       setAttendanceData(initialAttendanceData);
     } catch (err) {
-      console.log(err);
+      console.error(err);
+      customSonner({ type: "error", text: "Error fetching student attendance data." });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAcademicYearChange = async (event) => {
-    const academicYear = event.target.value;
-    setAcademicYear(academicYear);
-    await fetchStudentData(termType, selectedClass, academicYear);
+    const year = event.target.value;
+    setAcademicYear(year);
+    await fetchStudentData(termType, selectedClass, year);
   };
 
   const handleTermChange = async (event) => {
-    const termType = event.target.value;
-    setTermType(termType);
-    await fetchStudentData(termType, selectedClass, academicYear);
+    const term = event.target.value;
+    setTermType(term);
+    await fetchStudentData(term, selectedClass, academicYear);
   };
 
   const handleClassChange = async (e) => {
-    const selectedClass = e.target.value;
-    setSelectedClass(selectedClass);
-    await fetchStudentData(termType, selectedClass, academicYear);
+    const level = e.target.value;
+    setSelectedClass(level);
+    await fetchStudentData(termType, level, academicYear);
   };
 
   const handleInputChange = (studentId, field, value) => {
@@ -70,6 +83,11 @@ const ManualAttendance = ({ session }) => {
   };
 
   const submitAttendance = async () => {
+    if (!academicYear || !selectedClass || !termType) {
+      customSonner({ type: "error", text: "Please select Academic Year, Class, and Term." });
+      return;
+    }
+
     setLoading(true);
     try {
       await Promise.all(
@@ -84,130 +102,194 @@ const ManualAttendance = ({ session }) => {
           })
         )
       );
-      alert("Attendance submitted successfully.");
+      customSonner({ type: "success", text: "Attendance submitted successfully." });
     } catch (error) {
       console.error("Failed to submit attendance", error);
-      alert("There was an error submitting the attendance.");
+      customSonner({ type: "error", text: "There was an error submitting the attendance." });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  students?.sort((a, b) => {
-    const surnameA = a.surname.toLowerCase().trim(); // Remove extra spaces
-    const surnameB = b.surname.toLowerCase().trim(); // Remove extra spaces
-
-    if (surnameA < surnameB) {
-      return -1;
-    }
-    if (surnameA > surnameB) {
-      return 1;
-    }
-    return 0;
+  // Sort students alphabetically by surname
+  const sortedStudents = [...students].sort((a, b) => {
+    const surnameA = (a.surname || "").toLowerCase().trim();
+    const surnameB = (b.surname || "").toLowerCase().trim();
+    return surnameA.localeCompare(surnameB);
   });
 
   return (
-    <div className={styles.container}>
-      <h2>Attendance Register</h2>
-      <h3>Please select academicYear, term, class, then subject</h3>
-      <div className={styles.selectContainer}>
-        <select value={academicYear} onChange={handleAcademicYearChange}>
-          <option value="" disabled>
-            Select academic year
-          </option>
-          <option value="2025/2026">2025/2026</option>
-        </select>
-        <select value={selectedClass} onChange={handleClassChange}>
-          <option value="">Select class</option>
-          {session.teacherOf?.map((classItem) => (
-            <option key={classItem} value={classItem}>
-              {classItem}
-            </option>
-          ))}
-        </select>
-        <select value={termType} onChange={handleTermChange}>
-          <option value="" disabled>
-            Select Term
-          </option>
-          <option value="FIRST">First Term</option>
-          <option value="SECOND">Second Term</option>
-          <option value="THIRD">Third Term</option>
-        </select>
-      </div>
-      {termType && academicYear && (
-        <div className={styles.tableContainer}>
-          <table className={styles.attendanceTable}>
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Surname</th>
-                <th>Name</th>
-                <th>School Open Days</th>
-                <th>Days Present</th>
-                <th>Days Absent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((student, index) => (
-                <tr key={student.id}>
-                  <td>{index + 1}</td>
-                  <td>{student.surname}</td>
-                  <td>{student.name}</td>
-                  <td>
-                    <input
-                      type="number"
-                      value={attendanceData[student.id]?.schoolOpenDays || ""}
-                      onChange={(e) =>
-                        handleInputChange(
-                          student.id,
-                          "schoolOpenDays",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={attendanceData[student.id]?.daysPresent || ""}
-                      onChange={(e) =>
-                        handleInputChange(
-                          student.id,
-                          "daysPresent",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={attendanceData[student.id]?.daysAbsent || ""}
-                      onChange={(e) =>
-                        handleInputChange(
-                          student.id,
-                          "daysAbsent",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="space-y-6">
+      <PageHeader
+        title="Class Attendance Register"
+        subtitle="Select academic year, class, and term to record school open days and attendance counts."
+      />
+
+      {/* Filter Selection Card */}
+      <Card>
+        <CardHeader
+          title="Attendance Selection Filters"
+          subtitle="Choose class placement and academic term"
+        />
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field label="Academic Year" required>
+              <Select value={academicYear} onChange={handleAcademicYearChange}>
+                <option value="" disabled>
+                  Select academic year
+                </option>
+                <option value="2025/2026">2025/2026</option>
+              </Select>
+            </Field>
+
+            <Field label="Class" required>
+              <Select value={selectedClass} onChange={handleClassChange}>
+                <option value="">Select class</option>
+                {session?.teacherOf?.map((classItem) => (
+                  <option key={classItem} value={classItem}>
+                    {classItem.toUpperCase()}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Term" required>
+              <Select value={termType} onChange={handleTermChange}>
+                <option value="" disabled>
+                  Select Term
+                </option>
+                <option value="FIRST">First Term</option>
+                <option value="SECOND">Second Term</option>
+                <option value="THIRD">Third Term</option>
+              </Select>
+            </Field>
+          </div>
+        </CardBody>
+      </Card>
+
+      {loading && (
+        <div className="flex min-h-[200px] flex-col items-center justify-center gap-2">
+          <Spinner />
+          <p className="text-sm text-ink-500">Loading student attendance roster...</p>
         </div>
       )}
 
-      {termType && academicYear && (
-        <div className={styles.buttonContainer}>
-          <button
-            className={loading ? styles.disabled : ""}
-            onClick={submitAttendance}
-            disabled={loading}
-          >
-            {loading ? "Please wait..." : "Update Attendance"}
-          </button>
-        </div>
+      {/* Attendance Table Card */}
+      {!loading && termType && academicYear && selectedClass && (
+        <Card>
+          <CardHeader
+            title={`Attendance Register (${sortedStudents.length} Students)`}
+            subtitle={`Class: ${selectedClass.toUpperCase()} | Term: ${termType} | Year: ${academicYear}`}
+            action={
+              <Button
+                onClick={submitAttendance}
+                disabled={loading || sortedStudents.length === 0}
+                variant="primary"
+                icon={Save}
+              >
+                {loading ? "Saving..." : "Update Attendance"}
+              </Button>
+            }
+          />
+          <CardBody className="space-y-4">
+            {sortedStudents.length === 0 ? (
+              <div className="py-8 text-center text-ink-400">
+                <Users className="mx-auto mb-2 h-8 w-8 text-ink-300" />
+                <p className="text-sm">No students found in this class.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-ink-100">
+                <table className="w-full text-left text-sm text-ink-700">
+                  <thead className="bg-ink-50 text-xs uppercase font-semibold text-ink-600 border-b border-ink-100">
+                    <tr>
+                      <th className="px-3 py-3 w-12 text-center">No</th>
+                      <th className="px-3 py-3">Surname</th>
+                      <th className="px-3 py-3">First Name</th>
+                      <th className="px-3 py-3 w-36">School Open Days</th>
+                      <th className="px-3 py-3 w-36">Days Present</th>
+                      <th className="px-3 py-3 w-36">Days Absent</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ink-100 bg-white">
+                    {sortedStudents.map((student, index) => (
+                      <tr key={student.id} className="hover:bg-ink-50/50 transition-colors">
+                        <td className="px-3 py-2 text-center font-medium text-ink-500">
+                          {index + 1}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-ink-900 uppercase">
+                          {student.surname}
+                        </td>
+                        <td className="px-3 py-2 text-ink-800">
+                          {student.name}
+                        </td>
+                        <td className="p-1.5">
+                          <input
+                            type="number"
+                            value={attendanceData[student.id]?.schoolOpenDays || ""}
+                            onChange={(e) =>
+                              handleInputChange(
+                                student.id,
+                                "schoolOpenDays",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-ink-200 px-2.5 py-1.5 text-xs text-ink-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                            min="0"
+                          />
+                        </td>
+                        <td className="p-1.5">
+                          <input
+                            type="number"
+                            value={attendanceData[student.id]?.daysPresent || ""}
+                            onChange={(e) =>
+                              handleInputChange(
+                                student.id,
+                                "daysPresent",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-ink-200 px-2.5 py-1.5 text-xs text-ink-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                            min="0"
+                          />
+                        </td>
+                        <td className="p-1.5">
+                          <input
+                            type="number"
+                            value={attendanceData[student.id]?.daysAbsent || ""}
+                            onChange={(e) =>
+                              handleInputChange(
+                                student.id,
+                                "daysAbsent",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-ink-200 px-2.5 py-1.5 text-xs text-ink-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                            min="0"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {sortedStudents.length > 0 && (
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={submitAttendance}
+                  disabled={loading}
+                  variant="primary"
+                  icon={Save}
+                  size="lg"
+                  className="w-full sm:w-auto"
+                >
+                  {loading ? "Updating Attendance..." : "Update Attendance"}
+                </Button>
+              </div>
+            )}
+          </CardBody>
+        </Card>
       )}
     </div>
   );

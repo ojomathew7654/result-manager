@@ -25,7 +25,6 @@ const Navbar = () => {
   const hideNavbar =
     pathname.includes("/result") || pathname.includes("/login");
 
-  console.log(hideNavbar);
 
   return (
     <>

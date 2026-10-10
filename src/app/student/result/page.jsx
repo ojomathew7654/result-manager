@@ -5,7 +5,6 @@ import axios from "axios";
 
 import SolidRock from "@/components/report/solidrock/page";
 import UkpSecondary from "@/components/report/upksecondary/page";
-import styles from "./StudentReult.module.css";
 import JayRose from "@/components/report/jayrose/page";
 import NewCambridge from "@/components/report/newcambridge/page";
 import UkpJss from "@/components/report/upkjsclass/page";
@@ -13,6 +12,7 @@ import CrystalBrainsSchool from "@/components/report/CrystalBrainsSchool/page";
 import SeedOfGlory from "@/components/report/seedofglory/page";
 import Spinner from "@/components/Spinner/Spinner";
 import BeidaBasic from "@/components/report/BeidaBasic/page";
+import { ArrowLeft, CalendarDays, GraduationCap, Lock } from "lucide-react";
 
 const EachStudentResult = () => {
   const [student, setStudent] = useState({});
@@ -100,47 +100,60 @@ const EachStudentResult = () => {
     (result) => result.termType === selectedTerm && result.available
   );
   return (
-    <>
-      <div className={styles.eachStudent}>
-        <div className={styles.selectContainer}>
-          <button className={styles.back} onClick={() => router.back()}>
-            Go Back
-          </button>
-          <select
-            id="termSelect"
-            value={selectedTerm}
-            onChange={handleTermChange}
-          >
+    <main className="min-h-screen bg-paper px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <button type="button" onClick={() => router.back()} className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-ink-500 hover:text-brand-700">
+              <ArrowLeft size={16} /> Go back
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                <GraduationCap size={20} />
+              </div>
+              <div>
+                <h1 className="font-display text-2xl font-semibold text-ink-900">My result</h1>
+                <p className="text-sm text-ink-400">Your official result, straight from your school.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col gap-3 rounded-xl border border-ink-100 bg-white p-4 shadow-card sm:w-auto sm:flex-row sm:items-end">
+            <label className="flex min-w-36 flex-col gap-1.5 text-sm font-medium text-ink-700" htmlFor="termSelect">
+              <span className="flex items-center gap-2"><CalendarDays size={15} className="text-brand-600" /> Term</span>
+              <select id="termSelect" value={selectedTerm} onChange={handleTermChange} className="rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100">
             <option value="" disabled>
               Select Term
             </option>
             <option value="FIRST">First Term</option>
             <option value="SECOND">Second Term</option>
             <option value="THIRD">Third Term</option>
-          </select>
-
-          <select
-            id="academicYearSelect"
-            value={academicYear}
-            onChange={handleAcademicYearChange}
-          >
+              </select>
+            </label>
+            <label className="flex min-w-40 flex-col gap-1.5 text-sm font-medium text-ink-700" htmlFor="academicYearSelect">
+              <span>Academic year</span>
+              <select id="academicYearSelect" value={academicYear} onChange={handleAcademicYearChange} className="rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100">
             <option value="" disabled>
               Select academic year
             </option>
             <option value="2025/2026">2025/2026</option>
-          </select>
-        </div>
+              </select>
+            </label>
+          </div>
+        </header>
 
         {loading ? (
-          <h1 className="waitH1">
+          <h2 className="flex min-h-48 items-center justify-center gap-3 rounded-2xl border border-ink-100 bg-white text-lg font-medium text-ink-600 shadow-card">
             <Spinner /> Getting result please wait...
-          </h1>
-        ) : !selectedTerm || !academicYear ? (
-          <h2 className="waitH1">Please select both term and academic year.</h2>
-        ) : !isResultAvailable ? (
-          <h2 className="waitH1">
-            Oop!!! Your result has not been released by your school.
           </h2>
+        ) : !selectedTerm || !academicYear ? (
+          <div className="flex min-h-48 items-center justify-center rounded-2xl border border-ink-100 bg-white px-6 text-center text-lg font-medium text-ink-600 shadow-card">Please select both term and academic year.</div>
+        ) : !isResultAvailable ? (
+          <div className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-ink-100 bg-white px-6 text-center shadow-card">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700"><Lock size={20} /></div>
+            <h2 className="font-medium text-ink-900">Your result has not been released yet.</h2>
+            <p className="text-sm text-ink-400">Check back after your school publishes this term&apos;s result.</p>
+          </div>
         ) : (
           <>
             {schoolName && (
@@ -289,7 +302,7 @@ const EachStudentResult = () => {
           </>
         )}
       </div>
-    </>
+    </main>
   );
 };
 

@@ -1,14 +1,25 @@
-import styles from "./page.module.css";
-import Navbar from "./StudentNavbar/navbar";
-// import Navbar from "./student/StudentNavbar/navbar";
+"use client";
 
-export default async function RootLayout({ children }) {
+import StudentTopNav from "@/components/layout/StudentTopNav";
+
+import { usePathname } from "next/navigation";
+
+export default function RootLayout({ children }) {
+  const pathname = usePathname();
+  const isLoginPage = pathname.startsWith("/student/login");
+
   return (
-    <div className={styles.layout}>
-      <div className={styles.navbar}>
-        <Navbar />{" "}
-      </div>
-      <div className={styles.allChild}>{children}</div>
+    <div className="min-h-screen bg-paper">
+      {!isLoginPage ? (
+        <>
+          <StudentTopNav />
+          <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+            {children}
+          </main>
+        </>
+      ) : (
+       <div> {children} </div>
+      )}
     </div>
   );
 }

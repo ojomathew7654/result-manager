@@ -225,7 +225,7 @@ const Payment = () => {
 
   return (
     <div className={styles.payment}>
-      <h1>Please select academic year, term and class</h1>
+      <h1 className="text-white">Please select academic year, term and class</h1>
 
       <div className={styles.selectContainer}>
         <select
