@@ -23,6 +23,9 @@ export default function Topbar({ onMenuClick, name = "Admin", role = "Administra
         <Menu size={20} />
       </button>
 
+      <div className="hidden text-sm text-ink-400 lg:block">
+      </div>
+
       <div className="flex items-center gap-3 sm:gap-4">
         <button className="rounded-lg p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-600">
           <Bell size={18} />
