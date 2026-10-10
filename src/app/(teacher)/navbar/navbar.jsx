@@ -18,7 +18,6 @@ import {
   Menu,
   X,
   GraduationCap,
-  ChevronDown,
 } from "lucide-react";
 
 const navItems = [
@@ -32,7 +31,6 @@ const navItems = [
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [school, setSchool] = useState({});
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -113,49 +111,33 @@ const Navbar = () => {
 
         {/* Right: User Profile & Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <div className="relative">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2.5 rounded-lg border border-ink-700 bg-ink-800/80 px-3 py-1.5 text-xs text-white hover:bg-ink-800 transition-colors"
-            >
-              {session?.imageUrl ? (
-                <div className="relative h-6 w-6 overflow-hidden rounded-full border border-ink-600">
-                  <Image
-                    src={session.imageUrl}
-                    alt={session.name || "Teacher"}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white uppercase">
-                  {session?.name ? session.name.charAt(0) : "T"}
-                </div>
-              )}
-              <span className="font-medium max-w-[120px] truncate uppercase">
-                {session?.name || "Teacher"}
-              </span>
-              <ChevronDown size={14} className="text-ink-400" />
-            </button>
-
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-ink-700 bg-ink-900 p-2 shadow-card z-50">
-                <div className="px-3 py-2 border-b border-ink-800">
-                  <p className="text-xs font-semibold text-white uppercase truncate">
-                    {session?.name}
-                  </p>
-                  <p className="text-[10px] text-ink-400">Teacher Account</p>
-                </div>
-                <button
-                  onClick={logOut}
-                  className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
-                >
-                  <LogOut size={14} />
-                  <span>Log Out</span>
-                </button>
+          <div className="flex items-center gap-2.5 rounded-lg border border-ink-700 bg-ink-800/80 px-3 py-1.5 text-xs text-white">
+            {session?.imageUrl ? (
+              <div className="relative h-6 w-6 overflow-hidden rounded-full border border-ink-600 shrink-0">
+                <Image
+                  src={session.imageUrl}
+                  alt={session.name || "Teacher"}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white uppercase shrink-0">
+                {session?.name ? session.name.charAt(0) : "T"}
               </div>
             )}
+            <span className="font-medium max-w-[120px] truncate uppercase">
+              {session?.name || "Teacher"}
+            </span>
           </div>
+
+          <button
+            onClick={logOut}
+            className="flex items-center gap-2 rounded-lg bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/20 transition-colors"
+          >
+            <LogOut size={14} />
+            <span>Log Out</span>
+          </button>
         </div>
 
         {/* Mobile Menu Toggle */}
