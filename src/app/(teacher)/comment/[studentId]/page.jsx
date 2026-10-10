@@ -215,8 +215,8 @@ const EachStudentResult = ({ params }) => {
           title="General Remarks & Comments"
           subtitle="Form Teacher and Principal / Head of School evaluation comments."
         />
-        <CardBody className="space-y-4">
-          <Field label="Form Teacher Name" htmlFor="formTeacherName">
+        <CardBody className="space-y-4 text-black" >
+          <Field label="Form Teacher Name" htmlFor="formTeacherName" >
             <Input
               id="formTeacherName"
               value={formTeacherName}
