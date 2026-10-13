@@ -71,7 +71,7 @@ const StudentPerformance = () => {
       // Remove level and variant from each student object
       const sanitizedStudents = data.map(({ level, variant, ...rest }) => rest);
       const sortedStudents = sanitizedStudents.sort(
-        (a, b) => a.position - b.position
+        (a, b) => a.position - b.position,
       );
       setStudents(sortedStudents);
     } catch (error) {
@@ -90,7 +90,7 @@ const StudentPerformance = () => {
       const encodedAcademicYear = encodeURIComponent(academicYear);
       const [level, variant] = selectedClass.split("-");
       const { data } = await axios.get(
-        `/api/student/performance/yearly/${encodedAcademicYear}-${session?.schoolId}-${level}-${variant}`
+        `/api/student/performance/yearly/${encodedAcademicYear}-${session?.schoolId}-${level}-${variant}`,
       );
       setYearlyData(data);
     } catch (error) {
@@ -126,11 +126,11 @@ const StudentPerformance = () => {
         Object.keys(student).filter(
           (key) =>
             !["surname", "name", "totalScore", "average", "position"].includes(
-              key
-            )
-        )
-      )
-    )
+              key,
+            ),
+        ),
+      ),
+    ),
   );
   const PaddedCell = ({ value }) => <>&nbsp;{value ?? "-"}&nbsp;</>;
 
@@ -209,7 +209,7 @@ const StudentPerformance = () => {
                     levelAndVariant?.variant
                       ? " - " + levelAndVariant.variant.toUpperCase()
                       : ""
-                  } Broadsheet – ${termType} Term, 2024/2025 Academic Session`}
+                  } Broadsheet – ${termType} Term, 2026/2027 Academic Session`}
                 </h4>
               </div>
             </header>
