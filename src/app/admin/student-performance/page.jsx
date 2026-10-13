@@ -209,7 +209,7 @@ const StudentPerformance = () => {
                     levelAndVariant?.variant
                       ? " - " + levelAndVariant.variant.toUpperCase()
                       : ""
-                  } Broadsheet – ${termType} Term, 2026/2027 Academic Session`}
+                  } Broadsheet – ${termType} Term, 2025/2026 Academic Session`}
                 </h4>
               </div>
             </header>
