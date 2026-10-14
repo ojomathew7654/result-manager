@@ -38,7 +38,7 @@ const MoveStudents = () => {
           ...new Set(
             data.classes
               .map((cls) => cls.split("-")[1] || "")
-              .filter((variant) => variant)
+              .filter((variant) => variant),
           ),
         ];
 
@@ -68,7 +68,7 @@ const MoveStudents = () => {
       const variantParam = variant || "";
 
       const { data } = await axios.get(
-        `/api/move_students/${session.schoolId}-${selectedLevel}-${variantParam}-${encodedAcademicYear}`
+        `/api/move_students/${session.schoolId}-${selectedLevel}-${variantParam}-${encodedAcademicYear}`,
       );
 
       setStudents(data);
@@ -77,7 +77,7 @@ const MoveStudents = () => {
           ? `${data.length} students found for ${selectedLevel} ${
               variant || ""
             }`
-          : "No students found for the selected level and variant."
+          : "No students found for the selected level and variant.",
       );
     } catch (err) {
       console.error("Fetch students error:", err);
@@ -102,7 +102,7 @@ const MoveStudents = () => {
     // Prevent same level/year promotion
     if (academicYear === nextAcademicYear && selectedLevel === nextLevel) {
       setMessage(
-        "Next level and academic year must be different from the current ones."
+        "Next level and academic year must be different from the current ones.",
       );
       return;
     }
@@ -126,7 +126,7 @@ const MoveStudents = () => {
     } catch (err) {
       console.error("Promote students error:", err);
       setMessage(
-        err.response?.data?.error || "Error occurred while promoting students."
+        err.response?.data?.error || "Error occurred while promoting students.",
       );
     } finally {
       setPromoting(false);
@@ -145,8 +145,8 @@ const MoveStudents = () => {
           onChange={(e) => setAcademicYear(e.target.value)}
         >
           <option value="">Select Academic Year</option>
-          <option value="2024/2025">2024/2025</option>
           <option value="2025/2026">2025/2026</option>
+          <option value="2024/2025">2026/2027</option>
         </select>
 
         <select
