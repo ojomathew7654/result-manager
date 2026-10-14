@@ -100,12 +100,12 @@ const MoveStudents = () => {
     }
 
     // Prevent same level/year promotion
-    if (academicYear === nextAcademicYear && selectedLevel === nextLevel) {
-      setMessage(
-        "Next level and academic year must be different from the current ones.",
-      );
-      return;
-    }
+    // if (academicYear === nextAcademicYear && selectedLevel === nextLevel) {
+    //   setMessage(
+    //     "Next level and academic year must be different from the current ones.",
+    //   );
+    //   return;
+    // }
 
     setPromoting(true);
     setMessage("");

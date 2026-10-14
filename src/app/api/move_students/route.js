@@ -12,8 +12,7 @@ export async function PUT(req) {
       nextVariant,
       nextAcademicYear,
     } = await req.json();
-    console.log(variant);
-    console.log(nextVariant);
+
     // Validate required fields
     if (
       !schoolId ||
