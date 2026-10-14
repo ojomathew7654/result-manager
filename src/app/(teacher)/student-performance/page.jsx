@@ -74,7 +74,7 @@ const StudentPerformance = () => {
       const encodedAcademicYear = encodeURIComponent(academicYear);
       const [level, variant] = selectedClass.split("-");
       const { data } = await axios.get(
-        `/api/student/performance/yearly/${encodedAcademicYear}-${session?.schoolId}-${level}-${variant}`
+        `/api/student/performance/yearly/${encodedAcademicYear}-${session?.schoolId}-${level}-${variant}`,
       );
       setYearlyData(data);
     } catch (error) {
@@ -110,11 +110,11 @@ const StudentPerformance = () => {
         Object.keys(student).filter(
           (key) =>
             !["surname", "name", "totalScore", "average", "position"].includes(
-              key
-            )
-        )
-      )
-    )
+              key,
+            ),
+        ),
+      ),
+    ),
   );
   const PaddedCell = ({ value }) => <>&nbsp;{value ?? "-"}&nbsp;</>;
 
@@ -138,7 +138,7 @@ const StudentPerformance = () => {
           <option value="" disabled>
             Select academic year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select
           id="class-select"

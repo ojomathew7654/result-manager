@@ -35,14 +35,14 @@ const Class = () => {
       const { data } = await axios.get(
         `/api/student/class/result/${termType}-${
           session.schoolId
-        }-${encodeURIComponent(academicYear)}-${selectedClass}`
+        }-${encodeURIComponent(academicYear)}-${selectedClass}`,
       );
       const res = await axios.get(`/api/school/${session.schoolId}`);
       setInput(res.data.input);
       setSchoolName(res.data.name);
       const transformedData = data.map((student) => {
         const currentTerm = student.terms.find(
-          (term) => term.termType === termType
+          (term) => term.termType === termType,
         );
         return { ...student, currentTerm };
       });
@@ -57,11 +57,11 @@ const Class = () => {
               (student) =>
                 student.currentTerm?.subjects
                   ?.filter((subject) =>
-                    userSubjects.includes(subject.subjectName)
+                    userSubjects.includes(subject.subjectName),
                   )
-                  .map((subject) => subject.subjectName) || []
-            )
-          )
+                  .map((subject) => subject.subjectName) || [],
+            ),
+          ),
         );
         setAvailableSubjects(filteredSubjects);
       } else {
@@ -119,7 +119,7 @@ const Class = () => {
       }
       const { data } = await axios.patch(
         `/api/student/class/${selectedClass}`,
-        { termType, records }
+        { termType, records },
       );
       alert(data.message);
     } catch (error) {
@@ -132,7 +132,7 @@ const Class = () => {
     const updatedSubjectScores = updatedScores[student.id]?.[subject] || {};
     const existingSubjectScores =
       student.currentTerm?.subjects.find(
-        (sub) => sub.subjectName === subject
+        (sub) => sub.subjectName === subject,
       ) || {};
 
     const scores = {
@@ -170,7 +170,7 @@ const Class = () => {
           <option value="" disabled>
             Select academic year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select id="termSelect" value={termType} onChange={handleTermChange}>
           <option value="" disabled>
@@ -258,7 +258,7 @@ const Class = () => {
                     {students.map((student, index) => {
                       const subject =
                         student.currentTerm?.subjects.find(
-                          (subject) => subject.subjectName === selectedSubject
+                          (subject) => subject.subjectName === selectedSubject,
                         ) || {};
 
                       return (
@@ -287,7 +287,7 @@ const Class = () => {
                                         student.id,
                                         selectedSubject,
                                         "rt",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                   />
@@ -310,7 +310,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "firstCA",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -332,7 +332,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "secondCA",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -354,7 +354,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "thirdCA",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -377,7 +377,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "fourthCA",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -399,7 +399,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "fifthCA",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -421,7 +421,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "sixthCA",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -443,7 +443,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "assignment",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -470,7 +470,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "note",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -497,7 +497,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "affective",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -520,7 +520,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "project",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -543,7 +543,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "exam",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />

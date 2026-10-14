@@ -49,11 +49,11 @@ const EachStudentResult = () => {
       const encodedAcademicYear = encodeURIComponent(academicYear);
 
       const { data } = await axios.get(
-        `/api/result/ukp/${encodedAcademicYear}-${studentId}-${selectedTerm}`
+        `/api/result/ukp/${encodedAcademicYear}-${studentId}-${selectedTerm}`,
       );
       setSubjectPosition(data.subjectPosition);
       const filteredAttendance = data.student.attendanceList.find(
-        (attendance) => attendance.termType === selectedTerm
+        (attendance) => attendance.termType === selectedTerm,
       );
       setAttendanceList(filteredAttendance);
       setSchool(data.student.school);
@@ -68,10 +68,10 @@ const EachStudentResult = () => {
       setFormTeacherName(data.student.formTeacherName || "");
       setPsychomotor(
         data.student.traitRatings.filter((tr) => tr.type === "Psychomotor") ||
-          []
+          [],
       );
       setEffectiveTraits(
-        data.student.traitRatings.filter((tr) => tr.type === "Effective") || []
+        data.student.traitRatings.filter((tr) => tr.type === "Effective") || [],
       );
     } catch (err) {
       console.log(err);
@@ -97,7 +97,7 @@ const EachStudentResult = () => {
   };
 
   const isResultAvailable = student.resultAvailability?.some(
-    (result) => result.termType === selectedTerm && result.available
+    (result) => result.termType === selectedTerm && result.available,
   );
   return (
     <>
@@ -127,7 +127,7 @@ const EachStudentResult = () => {
             <option value="" disabled>
               Select academic year
             </option>
-            <option value="2025/2026">2025/2026</option>
+            <option value="2026/2027">2026/2027</option>
           </select>
         </div>
 

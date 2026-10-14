@@ -22,7 +22,7 @@ const AllTeacherStudents = () => {
       const { data } = await axios.get(
         `/api/student/class/${"FIRST"}-${
           session.schoolId
-        }-${encodedAcademicYear}-${selectedClass}`
+        }-${encodedAcademicYear}-${selectedClass}`,
       );
       console.log(data);
       setStudents(data);
@@ -75,7 +75,7 @@ const AllTeacherStudents = () => {
           <option value="" disabled>
             Select academic year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select value={selectedClass} onChange={handleClassChange}>
           <option value="">Select class</option>

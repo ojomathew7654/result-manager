@@ -22,7 +22,7 @@ const AttendanceRegister = () => {
   const resumptionDate = parse(
     resumptionDateStr,
     "EEEE dd/MM/yyyy",
-    new Date()
+    new Date(),
   );
   const currentDate = new Date();
   const totalDays = differenceInDays(currentDate, resumptionDate);
@@ -52,7 +52,7 @@ const AttendanceRegister = () => {
             for (const dateStr of presentDates) {
               const date = new Date(dateStr);
               const weekIndex = Math.floor(
-                differenceInDays(date, resumptionDate) / 7
+                differenceInDays(date, resumptionDate) / 7,
               );
               const dayIndex = differenceInDays(date, resumptionDate) % 7;
               const week = `WEEK ${weekIndex + 1}`;
@@ -79,7 +79,7 @@ const AttendanceRegister = () => {
   const getAttendanceDate = (weekIndex, dayIndex) => {
     return format(
       addDays(resumptionDate, weekIndex * 7 + dayIndex),
-      "yyyy/MM/dd"
+      "yyyy/MM/dd",
     );
   };
 
@@ -87,7 +87,7 @@ const AttendanceRegister = () => {
     if (!termType || !selectedClass || !academicYear) return;
     const encodedAcademicYear = encodeURIComponent(academicYear);
     const { data } = await axios.get(
-      `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+      `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`,
     );
     setStudents(data);
   };
@@ -115,7 +115,7 @@ const AttendanceRegister = () => {
 
     // Check if anyone is marked present for the current day and week
     const isAnyPresent = students.some(
-      (s) => attendance[s.id]?.[week]?.[day] === true
+      (s) => attendance[s.id]?.[week]?.[day] === true,
     );
 
     // If trying to mark absent (uncheck) and no one is present, prevent it
@@ -185,7 +185,7 @@ const AttendanceRegister = () => {
             academicYear,
             termType,
           });
-        })
+        }),
       );
       alert(data.message);
     } catch (err) {
@@ -246,8 +246,7 @@ const AttendanceRegister = () => {
                 Select academic year
               </option>
               <option value="2023/2024">2023/2024</option>
-              <option value="2024/2025">2024/2025</option>
-              <option value="2025/2026">2025/2026</option>
+               <option value="2026/2027">2026/2027</option>
             </select>
           </div>
           {termType && academicYear && (

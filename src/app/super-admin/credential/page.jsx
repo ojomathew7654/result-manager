@@ -24,7 +24,7 @@ const Credential = () => {
     try {
       const encodedAcademicYear = encodeURIComponent(academicYear);
       const { data } = await axios.get(
-        `/api/student/credential/${termType}-${schoolId}-${encodedAcademicYear}-${"ss1"}`
+        `/api/student/credential/${termType}-${schoolId}-${encodedAcademicYear}-${"ss1"}`,
       );
       // Transform each student data to the desired format
       const transformedData = data.map((student) => ({
@@ -123,8 +123,7 @@ const Credential = () => {
           <option value="" disabled>
             Select academy year
           </option>
-          {/* <option value="2024/2025">2024/2025</option> */}
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select
           id="class-select"

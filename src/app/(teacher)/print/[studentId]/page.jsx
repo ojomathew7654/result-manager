@@ -45,11 +45,11 @@ const EachStudentResult = ({ params }) => {
       const encodedAcademicYear = encodeURIComponent(academicYear);
 
       const { data } = await axios.get(
-        `/api/result/ukp/${encodedAcademicYear}-${studentId}-${selectedTerm}`
+        `/api/result/ukp/${encodedAcademicYear}-${studentId}-${selectedTerm}`,
       );
       setSubjectPosition(data.subjectPosition);
       const filteredAttendance = data.student.attendanceList.find(
-        (attendance) => attendance.termType === selectedTerm
+        (attendance) => attendance.termType === selectedTerm,
       );
       setAttendanceList(filteredAttendance);
       setSchool(data.student.school);
@@ -64,10 +64,10 @@ const EachStudentResult = ({ params }) => {
       setFormTeacherName(data.student.formTeacherName || "");
       setPsychomotor(
         data.student.traitRatings.filter((tr) => tr.type === "Psychomotor") ||
-          []
+          [],
       );
       setEffectiveTraits(
-        data.student.traitRatings.filter((tr) => tr.type === "Effective") || []
+        data.student.traitRatings.filter((tr) => tr.type === "Effective") || [],
       );
     } catch (err) {
       console.log(err);
@@ -116,7 +116,7 @@ const EachStudentResult = ({ params }) => {
             <option value="" disabled>
               Select academic year
             </option>
-            <option value="2025/2026">2025/2026</option>
+            <option value="2026/2027">2026/2027</option>
           </select>
         </div>
 

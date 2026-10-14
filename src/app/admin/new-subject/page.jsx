@@ -65,7 +65,7 @@ const NewSubject = () => {
     setLoading(true);
     try {
       const updatedSubjects = schoolSubjects.map((subject) =>
-        subject === editingSubject ? trimmedEditedSubjectName : subject
+        subject === editingSubject ? trimmedEditedSubjectName : subject,
       );
       const { data } = await axios.patch(`/api/school/${session.schoolId}`, {
         subjects: updatedSubjects,
@@ -99,7 +99,7 @@ const NewSubject = () => {
       return;
     }
     const subjectExists = schoolSubjects.some(
-      (subject) => subject.toLowerCase() === trimmedNewSubject.toLowerCase()
+      (subject) => subject.toLowerCase() === trimmedNewSubject.toLowerCase(),
     );
     if (subjectExists) {
       setAlertMessage("Subject already exists.");
@@ -126,7 +126,7 @@ const NewSubject = () => {
   const addSubject = async () => {
     if (!academicYear || !selectedClass || !selectedSubject) {
       setAlertMessage(
-        "Please select from academicYear, Class, Subject, and Term."
+        "Please select from academicYear, Class, Subject, and Term.",
       );
       setOpenAlert(true);
       return;
@@ -158,7 +158,7 @@ const NewSubject = () => {
       !trimmedNewSubject
     ) {
       setAlertMessage(
-        "Please enter new subject, select from academicYear, Class and old Subject."
+        "Please enter new subject, select from academicYear, Class and old Subject.",
       );
       setOpenAlert(true);
       return;
@@ -185,7 +185,7 @@ const NewSubject = () => {
   const removeSubject = async () => {
     if (!academicYear || !selectedClass || !selectedSubject) {
       setAlertMessage(
-        "Please select from academicYear, Class, Subject, and Term."
+        "Please select from academicYear, Class, Subject, and Term.",
       );
       setOpenAlert(true);
       return;
@@ -222,12 +222,12 @@ const NewSubject = () => {
         `/api/school/subject/${session.schoolId}-${subjectName}`,
         {
           data: { schoolId: session.schoolId, subjectName },
-        }
+        },
       );
       setAlertMessage(data.message);
       setOpenAlert(true);
       setSchoolSubjects(
-        schoolSubjects.filter((subject) => subject !== subjectName)
+        schoolSubjects.filter((subject) => subject !== subjectName),
       );
     } catch (err) {
       console.log(err);
@@ -282,7 +282,7 @@ const NewSubject = () => {
           <option value="" disabled>
             Select academy year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
 
         <select value={selectedClass} onChange={handleClassChange}>

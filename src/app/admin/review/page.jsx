@@ -34,7 +34,7 @@ const ReviewResult = () => {
   const fetchStudentData = async (
     selectedClass,
     academicYear,
-    selectedTerm
+    selectedTerm,
   ) => {
     if (!selectedClass || !academicYear || !selectedTerm || !session?.schoolId)
       return;
@@ -42,7 +42,7 @@ const ReviewResult = () => {
     setLoading(true);
     try {
       const { data } = await axios.get(
-        `/api/result/review?selectedClass=${selectedClass}&schoolId=${session.schoolId}&academicYear=${academicYear}&selectedTerm=${selectedTerm}`
+        `/api/result/review?selectedClass=${selectedClass}&schoolId=${session.schoolId}&academicYear=${academicYear}&selectedTerm=${selectedTerm}`,
       );
       setStudents(data);
     } catch (err) {
@@ -95,8 +95,7 @@ const ReviewResult = () => {
           <option value="" disabled>
             Select academic year
           </option>
-          <option value="2025/2026">2025/2026</option>
-          {/* Add more academic years here if needed */}
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select value={selectedClass} onChange={handleClassChange}>
           <option value="">Select class</option>
@@ -159,8 +158,8 @@ const ReviewResult = () => {
                     key !== "subjectName" &&
                     term.subjects.some(
                       (subject) =>
-                        subject[key] !== null && subject[key] !== undefined
-                    )
+                        subject[key] !== null && subject[key] !== undefined,
+                    ),
                 ),
               ];
 
@@ -189,7 +188,7 @@ const ReviewResult = () => {
                             .filter(
                               (key) =>
                                 typeof subject[key] === "number" ||
-                                subject[key] === null
+                                subject[key] === null,
                             )
                             .reduce((sum, key) => sum + (subject[key] || 0), 0);
 

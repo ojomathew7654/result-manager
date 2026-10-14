@@ -30,12 +30,12 @@ const StudentCredential = () => {
     setLoading(true);
     try {
       const { data } = await axios.get(
-        `/api/student?schoolId=${session.schoolId}&academicYear=${academicYear}`
+        `/api/student?schoolId=${session.schoolId}&academicYear=${academicYear}`,
       );
 
       // Sort students by level
       const sortedStudents = [...data].sort((a, b) =>
-        a.level.localeCompare(b.level)
+        a.level.localeCompare(b.level),
       );
 
       // Distribute students evenly across div1 and div2
@@ -91,7 +91,7 @@ const StudentCredential = () => {
           <option value="" disabled>
             Select academy year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
       </div>
       <div className={styles.printoutContainer}>

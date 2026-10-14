@@ -17,14 +17,14 @@ const ManualAttendance = ({ session }) => {
     try {
       const encodedAcademicYear = encodeURIComponent(academicYear);
       const { data } = await axios.get(
-        `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+        `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`,
       );
 
       setStudents(data);
       const initialAttendanceData = {};
       data.forEach((student) => {
         const attendance = student.attendanceList.find(
-          (item) => item.termType === termType && item.session === academicYear
+          (item) => item.termType === termType && item.session === academicYear,
         );
         if (attendance) {
           initialAttendanceData[student.id] = {
@@ -81,8 +81,8 @@ const ManualAttendance = ({ session }) => {
             schoolOpenDays: attendanceData[student.id]?.schoolOpenDays || 0,
             daysAbsent: attendanceData[student.id]?.daysAbsent || 0,
             daysPresent: attendanceData[student.id]?.daysPresent || 0,
-          })
-        )
+          }),
+        ),
       );
       alert("Attendance submitted successfully.");
     } catch (error) {
@@ -114,7 +114,7 @@ const ManualAttendance = ({ session }) => {
           <option value="" disabled>
             Select academic year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select value={selectedClass} onChange={handleClassChange}>
           <option value="">Select class</option>
@@ -160,7 +160,7 @@ const ManualAttendance = ({ session }) => {
                         handleInputChange(
                           student.id,
                           "schoolOpenDays",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />
@@ -173,7 +173,7 @@ const ManualAttendance = ({ session }) => {
                         handleInputChange(
                           student.id,
                           "daysPresent",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />
@@ -186,7 +186,7 @@ const ManualAttendance = ({ session }) => {
                         handleInputChange(
                           student.id,
                           "daysAbsent",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />

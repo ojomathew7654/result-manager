@@ -21,7 +21,7 @@ const AttendanceRegister = () => {
   const resumptionDate = parse(
     resumptionDateStr,
     "EEEE dd/MM/yyyy",
-    new Date()
+    new Date(),
   );
   const currentDate = new Date();
   const totalDays = differenceInDays(currentDate, resumptionDate);
@@ -73,7 +73,7 @@ const AttendanceRegister = () => {
             for (const dateStr of presentDates) {
               const date = new Date(dateStr);
               const weekIndex = Math.floor(
-                differenceInDays(date, resumptionDate) / 7
+                differenceInDays(date, resumptionDate) / 7,
               );
               const dayIndex = differenceInDays(date, resumptionDate) % 7;
               const week = `WEEK ${weekIndex + 1}`;
@@ -92,7 +92,7 @@ const AttendanceRegister = () => {
   const getAttendanceDate = (weekIndex, dayIndex) => {
     return format(
       addDays(resumptionDate, weekIndex * 7 + dayIndex),
-      "yyyy/MM/dd"
+      "yyyy/MM/dd",
     );
   };
 
@@ -101,7 +101,7 @@ const AttendanceRegister = () => {
     if (!termType || !selectedClass || !academicYear) return;
     const encodedAcademicYear = encodeURIComponent(academicYear);
     const { data } = await axios.get(
-      `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+      `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`,
     );
     console.log(data);
     setStudents(data);
@@ -182,7 +182,7 @@ const AttendanceRegister = () => {
             academicYear,
             termType,
           });
-        })
+        }),
       );
       alert("Attendance updated successfully.");
     } catch (err) {
@@ -246,7 +246,7 @@ const AttendanceRegister = () => {
           <option value="" disabled>
             Select academy year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
       </div>
       {selectedClass !== "" && (
@@ -289,7 +289,7 @@ const AttendanceRegister = () => {
                           >
                             {day.charAt(0)}
                           </th>
-                        ))
+                        )),
                       )}
                     </tr>
                   </thead>
@@ -310,7 +310,7 @@ const AttendanceRegister = () => {
                                 onChange={() => handleCheck(student, week, day)}
                               />
                             </td>
-                          ))
+                          )),
                         )}
                         {index + 2 >= weeks.length && (
                           <td>{calculateTotal(student.id)}</td>
@@ -318,7 +318,7 @@ const AttendanceRegister = () => {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table>,
               );
             }
             return acc;

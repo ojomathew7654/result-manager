@@ -49,7 +49,7 @@ const ResultAvailability = () => {
     try {
       const encodedAcademicYear = encodeURIComponent(academicYear);
       const { data } = await axios.get(
-        `/api/student/class/FIRST-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+        `/api/student/class/FIRST-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`,
       );
       console.log(data);
       setStudents(data);
@@ -60,7 +60,7 @@ const ResultAvailability = () => {
         const termAvailability = student.resultAvailability.find(
           (availability) =>
             availability.termType === selectedTerm &&
-            availability.available === true
+            availability.available === true,
         );
 
         // Set the availability in selectedStudents for each student
@@ -110,7 +110,7 @@ const ResultAvailability = () => {
           studentId,
           termType: selectedTerm,
           isAvailable: availability,
-        })
+        }),
       );
       await axios.put("/api/student/class/6", { updates });
       alert("Result availability updated successfully.");
@@ -140,7 +140,7 @@ const ResultAvailability = () => {
   if (sessionStatus !== "authenticated") router.push("/");
 
   students?.sort((a, b) =>
-    a.surname < b.surname ? -1 : a.surname > b.surname ? 1 : 0
+    a.surname < b.surname ? -1 : a.surname > b.surname ? 1 : 0,
   );
 
   return (
@@ -155,7 +155,7 @@ const ResultAvailability = () => {
           <option value="" disabled>
             Select academic year
           </option>
-          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
 
         <select
