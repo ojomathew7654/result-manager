@@ -9,10 +9,12 @@ export async function PUT(req) {
       variant,
       academicYear,
       nextLevel,
+      nextVariant,
       nextAcademicYear,
     } = await req.json();
-
-    // ✅ Validate required fields
+    console.log(variant);
+    console.log(nextVariant);
+    // Validate required fields
     if (
       !schoolId ||
       !level ||
@@ -25,55 +27,64 @@ export async function PUT(req) {
           error:
             "schoolId, level, academicYear, nextLevel, and nextAcademicYear are required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
+    // Find students matching the current criteria
     const whereClause = {
       schoolId: Number(schoolId),
       level,
       academicYear,
     };
-    if (variant) whereClause.variant = variant;
 
-    // === Find all students ===
+    if (variant) {
+      whereClause.variant = variant;
+    }
+
     const students = await prisma.student.findMany({
       where: whereClause,
       select: { id: true },
     });
 
-    const studentIds = students.map((s) => s.id);
+    const studentIds = students.map((student) => student.id);
+
     if (studentIds.length === 0) {
       return NextResponse.json(
         { message: "No students found for the selected criteria" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // === Delete related records ===
+    // Delete related records
     await prisma.attendance.deleteMany({
       where: { studentId: { in: studentIds } },
     });
+
     await prisma.attendanceList.deleteMany({
       where: { studentId: { in: studentIds } },
     });
+
     await prisma.payment.deleteMany({
       where: { studentId: { in: studentIds } },
     });
+
     await prisma.resultAvailability.deleteMany({
       where: { studentId: { in: studentIds } },
     });
+
     await prisma.traitRating.deleteMany({
       where: { studentId: { in: studentIds } },
     });
+
     await prisma.studentTask.deleteMany({
       where: { studentId: { in: studentIds } },
     });
 
-    // === Reset subjects ===
+    // Reset subjects
     const terms = await prisma.term.findMany({
       where: { studentId: { in: studentIds } },
-      include: { subjects: true },
+      select: { id: true },
     });
 
     for (const term of terms) {
@@ -96,26 +107,33 @@ export async function PUT(req) {
       });
     }
 
-    // === Update students' level and academic year ===
+    // Update students' level, variant, and academic year
     await prisma.student.updateMany({
       where: whereClause,
       data: {
         level: nextLevel,
+        variant: nextVariant || null,
         academicYear: nextAcademicYear,
       },
     });
 
     return NextResponse.json(
       {
-        message: `✅ ${studentIds.length} students successfully moved to ${nextLevel} for ${nextAcademicYear}. All previous records cleared, subjects preserved.`,
+        message: `${studentIds.length} students successfully moved to ${nextLevel}${
+          nextVariant ? ` ${nextVariant}` : ""
+        } for ${nextAcademicYear}. Previous records cleared and subjects preserved.`,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error promoting students:", error);
+
     return NextResponse.json(
-      { error: "Failed to promote students", details: error.message },
-      { status: 500 }
+      {
+        error: "Failed to promote students",
+        details: error.message,
+      },
+      { status: 500 },
     );
   }
 }

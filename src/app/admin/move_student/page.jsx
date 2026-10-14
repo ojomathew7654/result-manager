@@ -113,11 +113,16 @@ const MoveStudents = () => {
     try {
       const body = {
         schoolId: session.schoolId,
+
+        // Current student information
         level: selectedLevel,
-        variant,
-        academicYear, // current academic year
-        nextLevel, // new level
-        nextAcademicYear, // new academic year ✅
+        variant: variant,
+        academicYear: academicYear,
+
+        // Destination information
+        nextLevel: nextLevel,
+        nextVariant: nextVariant, // ✅ Add this
+        nextAcademicYear: nextAcademicYear,
       };
 
       const res = await axios.put("/api/move_students", body);
