@@ -22,7 +22,7 @@ const AllStudents = () => {
     try {
       const encodedAcademicYear = encodeURIComponent(academicYear);
       const { data } = await axios.get(
-        `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+        `/api/student/class/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`,
       );
       setStudents(data);
     } catch (err) {
@@ -112,8 +112,8 @@ const AllStudents = () => {
           <option value="" disabled>
             Select academy year
           </option>
-          <option value="2024/2025">2024/2025</option>
           <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select
           id="class-select"

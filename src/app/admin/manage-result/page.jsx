@@ -58,7 +58,7 @@ const Class = () => {
     try {
       setLoading(true);
       const { data } = await axios.get(
-        `/api/student/class/result/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`
+        `/api/student/class/result/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`,
       );
       const res = await axios.get(`/api/school/${session.schoolId}`);
       setSchoolName(res.data.name);
@@ -70,9 +70,9 @@ const Class = () => {
         new Set(
           transformedData.flatMap(
             (student) =>
-              student.currentTerm?.map((subject) => subject.subjectName) || []
-          )
-        )
+              student.currentTerm?.map((subject) => subject.subjectName) || [],
+          ),
+        ),
       );
       const sortedSubjects = availableSubjects ? availableSubjects.sort() : [];
       setAvailableSubjects(sortedSubjects);
@@ -134,7 +134,7 @@ const Class = () => {
       }
       const { data } = await axios.patch(
         `/api/student/class/${selectedClass}`,
-        { termType, records }
+        { termType, records },
       );
       alert(data.message);
     } catch (error) {
@@ -156,7 +156,7 @@ const Class = () => {
 
     const total = input.reduce(
       (acc, key) => acc + (parseFloat(scores[key]) || 0),
-      0
+      0,
     );
 
     return total;
@@ -184,6 +184,7 @@ const Class = () => {
             Select academic year
           </option>
           <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
         </select>
         <select id="termSelect" value={termType} onChange={handleTermChange}>
           <option value="" disabled>
@@ -288,7 +289,7 @@ const Class = () => {
                                   ]?.["rt"] ??
                                   student.currentTerm?.find(
                                     (subject) =>
-                                      subject.subjectName === selectedSubject
+                                      subject.subjectName === selectedSubject,
                                   )?.rt ??
                                   ""
                                 }
@@ -297,7 +298,7 @@ const Class = () => {
                                     student.id,
                                     selectedSubject,
                                     "rt",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -314,7 +315,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.firstCA ??
                               ""
                             }
@@ -323,7 +324,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "firstCA",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -340,7 +341,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.secondCA ??
                               ""
                             }
@@ -349,7 +350,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "secondCA",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -365,7 +366,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.thirdCA ??
                               ""
                             }
@@ -374,7 +375,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "thirdCA",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -390,7 +391,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.fourthCA ??
                               ""
                             }
@@ -399,7 +400,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "fourthCA",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -415,7 +416,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.fifthCA ??
                               ""
                             }
@@ -424,7 +425,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "fifthCA",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -440,7 +441,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.sixthCA ??
                               ""
                             }
@@ -449,7 +450,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "sixthCA",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -465,7 +466,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.assignment ??
                               ""
                             }
@@ -474,7 +475,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "assignment",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -490,7 +491,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.project ??
                               ""
                             }
@@ -499,7 +500,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "project",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -520,7 +521,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.affective ??
                               ""
                             }
@@ -529,7 +530,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "affective",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -550,7 +551,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.note ??
                               ""
                             }
@@ -559,7 +560,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "note",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -576,7 +577,7 @@ const Class = () => {
                               ] ??
                               student.currentTerm?.find(
                                 (subject) =>
-                                  subject.subjectName === selectedSubject
+                                  subject.subjectName === selectedSubject,
                               )?.exam ??
                               ""
                             }
@@ -585,7 +586,7 @@ const Class = () => {
                                 student.id,
                                 selectedSubject,
                                 "exam",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
