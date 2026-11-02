@@ -138,7 +138,6 @@ const StudentPerformance = () => {
           <option value="" disabled>
             Select academic year
           </option>
-          <option value="2025/2026">2025/2026</option>
           <option value="2026/2027">2026/2027</option>
         </select>
         <select
