@@ -24,11 +24,11 @@ const Credential = () => {
     try {
       const encodedAcademicYear = encodeURIComponent(academicYear);
       const { data } = await axios.get(
-        `/api/student/credential/${termType}-${schoolId}-${encodedAcademicYear}-${"ss1"}`,
+        `/api/student/credential/${termType}-${schoolId}-${encodedAcademicYear}-${selectedClass}`,
       );
       // Transform each student data to the desired format
       const transformedData = data.map((student) => ({
-        level: student.level.toLowerCase(), // Converting level to lowercase
+        level: student.level.toLowerCase(),
         username: student.username,
         password: student.password,
         name: student.name,
@@ -59,13 +59,20 @@ const Credential = () => {
     const fetchSchoolClasses = async () => {
       try {
         const { data } = await axios.get(`/api/school/${schoolId}`);
+
+        const primarySchool = [];
         const secondarySchool = [];
+
         data.classes.forEach((c) => {
           if (c.length > 1 && c[1].toLowerCase() === "s") {
             secondarySchool.push(c);
+          } else {
+            primarySchool.push(c);
           }
         });
-        const sortedClasses = secondarySchool ? secondarySchool.sort() : [];
+
+        const sortedClasses = primarySchool ? primarySchool.sort() : [];
+        // const sortedClasses = secondarySchool ? secondarySchool.sort() : [];
         setSchoolClasses(sortedClasses);
       } catch (error) {
         console.error("Error fetching school classes:", error);

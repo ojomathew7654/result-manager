@@ -52,6 +52,35 @@ model User {
   @@index([schoolId])
 }
 
+model Student {
+  id                 Int                  @id @default(autoincrement())
+  schoolId           Int
+  level              String
+  variant            String?
+  gender             String?
+  formTeacherName    String?
+  formTeacherRemark  String?
+  headOfSchoolRemark String?
+  password           String
+  name               String
+  image              String?
+  age                String?
+  registrationNo     String?
+  username           String               @unique
+  surname            String
+  academicYear       String
+  studentTasks       StudentTask[]
+  school             School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  attendance         Attendance[]
+  attendanceList     AttendanceList[]
+  terms              Term[]
+  traitRatings       TraitRating[]
+  resultAvailability ResultAvailability[]
+  Payment            Payment[]
+
+  @@index([schoolId])
+}
+
 model FeeItem {
   id       Int    @id @default(autoincrement())
   name     String
@@ -87,34 +116,6 @@ model AttendanceList {
   @@unique([studentId, termType, session], name: "unique_attendance_per_term_session")
 }
 
-model Student {
-  id                 Int                  @id @default(autoincrement())
-  schoolId           Int
-  level              String
-  variant            String?
-  gender             String?
-  formTeacherName    String?
-  formTeacherRemark  String?
-  headOfSchoolRemark String?
-  password           String
-  name               String
-  image              String?
-  age                String?
-  registrationNo     String?
-  username           String               @unique
-  surname            String
-  academicYear       String
-  studentTasks       StudentTask[]
-  school             School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  attendance         Attendance[]
-  attendanceList     AttendanceList[]
-  terms              Term[]
-  traitRatings       TraitRating[]
-  resultAvailability ResultAvailability[]
-  Payment            Payment[]
-
-  @@index([schoolId])
-}
 model Term {
   id        Int       @id @default(autoincrement())
   studentId Int
