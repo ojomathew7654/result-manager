@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import axios from "axios";
 import Spinner from "@/components/Spinner/Spinner";
 
-const yearsArray = ["2025/2026"];
+const yearsArray = ["2026/2027"];
 
 const RegisterStudents = () => {
   const [loading, setLoading] = useState(false);

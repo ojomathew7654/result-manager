@@ -137,7 +137,7 @@ const EachStudentResult = ({ params }) => {
 
   function getRandomFormTeacherRemark() {
     const randomIndex = Math.floor(
-      Math.random() * defaultFormTeacherRemarks.length
+      Math.random() * defaultFormTeacherRemarks.length,
     );
     return defaultFormTeacherRemarks[randomIndex];
   }
@@ -146,7 +146,7 @@ const EachStudentResult = ({ params }) => {
   const [formTeacherName, setFormTeacherName] = useState("");
   const [psychomotor, setPsychomotor] = useState(defaultPsychomotor);
   const [effectiveTraits, setEffectiveTraits] = useState(
-    defaultEffectiveTraits
+    defaultEffectiveTraits,
   );
   const [formTeacherRemark, setFormTeacherRemark] = useState("");
 
@@ -176,49 +176,49 @@ const EachStudentResult = ({ params }) => {
       setIsLoading(true); // Set loading state to true while fetching
       try {
         const res = await axios.get(`/api/student/${studentId}`);
-        const encodedAcademicYear = encodeURIComponent("2025/2026");
+        const encodedAcademicYear = encodeURIComponent("2026/2027");
 
         const { data } = await axios.get(
           hasMoreThanOneS(res.data.level)
             ? `/api/student/result/ssClass/${encodedAcademicYear}-${studentId}-${"FIRST"}`
-            : `/api/student/result/${encodedAcademicYear}-${studentId}-${"FIRST"}`
+            : `/api/student/result/${encodedAcademicYear}-${studentId}-${"FIRST"}`,
         );
         setStudent(data.student);
         setSchoolName(data.student.school.name);
         setFormTeacherName(data.student.formTeacherName || "");
         setFormTeacherRemark(
           data.student.formTeacherRemark ||
-            data.student.name + " " + getRandomFormTeacherRemark()
+            data.student.name + " " + getRandomFormTeacherRemark(),
         );
 
         setHeadOfSchoolRemark(
           data.student.headOfSchoolRemark ||
-            getCommentForAverage(data.studentFinalAverage)
+            getCommentForAverage(data.studentFinalAverage),
         );
 
         const psychomotorTraits = data.student.traitRatings.filter(
-          (tr) => tr.type === "Psychomotor"
+          (tr) => tr.type === "Psychomotor",
         );
         const effectiveTraitsList = data.student.traitRatings.filter(
-          (tr) => tr.type === "Effective"
+          (tr) => tr.type === "Effective",
         );
 
         setPsychomotor(
           defaultPsychomotor.map(
             (defaultTrait) =>
               psychomotorTraits.find(
-                (trait) => trait.trait === defaultTrait.trait
-              ) || defaultTrait
-          )
+                (trait) => trait.trait === defaultTrait.trait,
+              ) || defaultTrait,
+          ),
         );
 
         setEffectiveTraits(
           defaultEffectiveTraits.map(
             (defaultTrait) =>
               effectiveTraitsList.find(
-                (trait) => trait.trait === defaultTrait.trait
-              ) || defaultTrait
-          )
+                (trait) => trait.trait === defaultTrait.trait,
+              ) || defaultTrait,
+          ),
         );
       } catch (error) {
         console.error("Error fetching student data", error);
