@@ -1,109 +1,100 @@
 import { NextResponse } from "next/server";
 import prisma from "../../../../../../prisma/prisma";
 
+const SCORE_FIELDS = [
+  "firstCA",
+  "secondCA",
+  "thirdCA",
+  "fourthCA",
+  "fifthCA",
+  "sixthCA",
+  "assignment",
+  "project",
+  "note",
+  "rt",
+  "affective",
+  "exam",
+];
+
+const pickScores = (scores = {}) =>
+  Object.fromEntries(SCORE_FIELDS.map((f) => [f, scores[f]]));
+
 export async function PATCH(request, { params }) {
-  const { id } = params;
   const { termType, records } = await request.json();
 
+  if (!termType || !Array.isArray(records)) {
+    return NextResponse.json(
+      { message: "termType and records are required" },
+      { status: 400 },
+    );
+  }
+
   try {
-    for (const { studentId, record } of records) {
-      if (!record.subjectName) {
-        console.error(
-          `Subject name is required in the record object for student ${studentId}.`
-        );
-        continue;
-      }
+    // All-or-nothing: if any subject fails, nothing is saved.
+    await prisma.$transaction(
+      async (tx) => {
+        for (const { studentId, record } of records) {
+          if (!record?.subjectName) {
+            console.error(`Subject name is required for student ${studentId}.`);
+            continue;
+          }
 
-      const student = await prisma.student.findUnique({
-        where: { id: Number(studentId) },
-      });
-      if (!student) {
-        console.error(`Student with ID ${studentId} not found`);
-        continue;
-      }
+          const sid = Number(studentId);
+          const student = await tx.student.findUnique({ where: { id: sid } });
+          if (!student) {
+            console.error(`Student with ID ${studentId} not found`);
+            continue;
+          }
 
-      let termResult = await prisma.term.findFirst({
-        where: { studentId: Number(studentId), termType },
-        include: { subjects: true },
-      });
-      if (!termResult) {
-        termResult = await prisma.term.create({
-          data: {
-            studentId: Number(studentId),
-            termType,
-            subjects: {
-              create: {
+          // Same student appears in several records; the loop is sequential,
+          // so the first creates the term and the rest find it.
+          let term = await tx.term.findFirst({
+            where: { studentId: sid, termType },
+            include: { subjects: true },
+          });
+
+          if (!term) {
+            term = await tx.term.create({
+              data: { studentId: sid, termType },
+              include: { subjects: true },
+            });
+          }
+
+          const scores = pickScores(record.scores);
+          const existing = term.subjects.find(
+            (s) => s.subjectName === record.subjectName,
+          );
+
+          if (existing) {
+            const data = {};
+            for (const f of SCORE_FIELDS) {
+              data[f] = scores[f] ?? existing[f];
+            }
+            await tx.subject.update({ where: { id: existing.id }, data });
+          } else {
+            await tx.subject.create({
+              data: {
                 subjectName: record.subjectName,
-                firstCA: record.scores.firstCA,
-                secondCA: record.scores.secondCA,
-                thirdCA: record.scores.thirdCA,
-                fourthCA: record.scores.fourthCA,
-                fifthCA: record.scores.fifthCA,
-                sixthCA: record.scores.sixthCA,
-                assignment: record.scores.assignment,
-                project: record.scores.project,
-                note: record.scores.note,
-                rt: record.scores.rt,
-                affective: record.scores.affective,
-                exam: record.scores.exam,
+                ...scores,
+                termId: term.id,
               },
-            },
-          },
-        });
-      } else {
-        const subjectIndex = termResult.subjects.findIndex(
-          (subject) => subject.subjectName === record.subjectName
-        );
-
-        if (subjectIndex !== -1) {
-          const existingSubject = termResult.subjects[subjectIndex];
-          await prisma.subject.update({
-            where: { id: existingSubject.id },
-            data: {
-              firstCA: record.scores.firstCA ?? existingSubject.firstCA,
-              secondCA: record.scores.secondCA ?? existingSubject.secondCA,
-              thirdCA: record.scores.thirdCA ?? existingSubject.thirdCA,
-              fourthCA: record.scores.fourthCA ?? existingSubject.fourthCA,
-              fifthCA: record.scores.fifthCA ?? existingSubject.fifthCA,
-              sixthCA: record.scores.sixthCA ?? existingSubject.sixthCA,
-              assignment:
-                record.scores.assignment ?? existingSubject.assignment,
-              project: record.scores.project ?? existingSubject.project,
-              note: record.scores.note ?? existingSubject.note,
-              affective: record.scores.affective ?? existingSubject.affective,
-              rt: record.scores.rt ?? existingSubject.rt,
-              exam: record.scores.exam ?? existingSubject.exam,
-            },
-          });
-        } else {
-          await prisma.subject.create({
-            data: {
-              subjectName: record.subjectName,
-              firstCA: record.scores.firstCA,
-              secondCA: record.scores.secondCA,
-              thirdCA: record.scores.thirdCA,
-              fourthCA: record.scores.fourthCA,
-              fifthCA: record.scores.fifthCA,
-              sixthCA: record.scores.sixthCA,
-              assignment: record.scores.assignment,
-              project: record.scores.project,
-              note: record.scores.note,
-              rt: record.scores.rt,
-              affective: record.scores.affective,
-              exam: record.scores.exam,
-              termId: termResult.id,
-            },
-          });
+            });
+          }
         }
-      }
-    }
+      },
+      { timeout: 20000 }, // a full student can mean ~15+ subjects
+    );
+
     return NextResponse.json(
       { message: "Data updated successfully" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error adding or updating data to term:", error);
-    throw error;
+    return NextResponse.json(
+      { message: "Failed to update data" },
+      { status: 500 },
+    );
   }
 }
 
@@ -118,7 +109,7 @@ export async function PUT(request) {
     // Check if there's anything to update
     const filteredUpdates = updates.filter(
       ({ isAvailable, termType, studentId }) =>
-        isAvailable !== undefined && termType && studentId
+        isAvailable !== undefined && termType && studentId,
     );
     console.log(filteredUpdates);
     const updatePromises = filteredUpdates.map(
@@ -140,20 +131,20 @@ export async function PUT(request) {
             available: isAvailable,
           },
         });
-      }
+      },
     );
     await Promise.all(updatePromises);
 
     // Return a successful response
     return NextResponse.json(
       { message: "Result availability updated successfully" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error updating student result availability:", error);
     return NextResponse.json(
       { error: "Failed to update result availability" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -166,7 +157,7 @@ export async function GET(request, { params }) {
   if (!level || !schoolId || !termType || !academicYear) {
     return NextResponse.json(
       { error: "Level, School ID, and termType are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -202,7 +193,7 @@ export async function GET(request, { params }) {
     console.error("Error fetching students:", error);
     return NextResponse.json(
       { error: "Failed to fetch students by class" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

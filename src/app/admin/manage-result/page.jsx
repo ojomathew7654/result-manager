@@ -1,16 +1,36 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import styles from "./check-result.module.css";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
 import axios from "axios";
 import Spinner from "@/components/Spinner/Spinner";
+
+const UKP = "THE UKP SCHOOLS";
+
+// One place that describes every score column.
+// hideForSS: for THE UKP SCHOOLS, hide this column for "ss" levels.
+const COLUMNS = [
+  { key: "rt", label: "R. T", hideForSS: true },
+  { key: "firstCA", label: "CA 1" },
+  { key: "secondCA", label: "CA 2" },
+  { key: "thirdCA", label: "CA 3" },
+  { key: "fourthCA", label: "CA 4" },
+  { key: "fifthCA", label: "CA 5" },
+  { key: "sixthCA", label: "CA 6" },
+  { key: "assignment", label: "Ass" },
+  { key: "project", label: "Proj" },
+  { key: "affective", label: "Affective", hideForSS: true },
+  { key: "note", label: "Note", hideForSS: true },
+  { key: "exam", label: "Exam" },
+];
 
 const Class = () => {
   const [students, setStudents] = useState([]);
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [schoolClasses, setSchoolClasses] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  // Shape: { [studentId]: { [subjectName]: { [scoreKey]: rawInputString } } }
   const [updatedScores, setUpdatedScores] = useState({});
   const [input, setInput] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,8 +44,7 @@ const Class = () => {
     const fetchSchoolClasses = async () => {
       try {
         const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        console.log(data);
-        setSchoolClasses(data.classes.sort() || []);
+        setSchoolClasses(data.classes?.sort() || []);
       } catch (error) {
         console.error("Error fetching school classes:", error);
       }
@@ -37,14 +56,12 @@ const Class = () => {
   }, [session]);
 
   useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      if (session.role !== "ADMIN") {
-        signOut();
-        redirect("/");
-      }
+    if (sessionStatus === "authenticated" && session.role !== "ADMIN") {
+      signOut({ callbackUrl: "/" });
     }
   }, [sessionStatus, session]);
-  if (sessionStatus == "loading")
+
+  if (sessionStatus === "loading")
     return (
       <h1 className="waitH1">
         <Spinner /> Please wait...
@@ -52,9 +69,25 @@ const Class = () => {
     );
   if (sessionStatus !== "authenticated") redirect("/");
 
-  const fetchStudentData = async (termType, selectedClass, academicYear) => {
-    const encodedAcademicYear = encodeURIComponent(academicYear);
+  const transformData = (data, termType) => {
+    const transformed = data.map((student) => {
+      const term = student.terms.find((t) => t.termType === termType);
+      student.currentTerm = term ? term.subjects : [];
+      return student;
+    });
+    return transformed.sort((a, b) =>
+      a.surname.toLowerCase().localeCompare(b.surname.toLowerCase()),
+    );
+  };
+
+  const fetchStudentData = async (
+    termType,
+    selectedClass,
+    academicYear,
+    { keepStudent = false } = {},
+  ) => {
     if (!termType || !selectedClass || !academicYear) return;
+    const encodedAcademicYear = encodeURIComponent(academicYear);
     try {
       setLoading(true);
       const { data } = await axios.get(
@@ -63,19 +96,26 @@ const Class = () => {
       const res = await axios.get(`/api/school/${session.schoolId}`);
       setSchoolName(res.data.name);
       setInput(res.data.input);
+
       const transformedData = transformData(data, termType);
       setStudents(transformedData);
-      setSelectedSubject("");
-      const availableSubjects = Array.from(
+
+      if (!keepStudent) {
+        setSelectedStudentId("");
+        setUpdatedScores({});
+      }
+
+      // Every subject taken by anyone in the class, so a student who has no
+      // record for a subject yet can still have it entered.
+      const subjects = Array.from(
         new Set(
           transformedData.flatMap(
             (student) =>
               student.currentTerm?.map((subject) => subject.subjectName) || [],
           ),
         ),
-      );
-      const sortedSubjects = availableSubjects ? availableSubjects.sort() : [];
-      setAvailableSubjects(sortedSubjects);
+      ).sort();
+      setAvailableSubjects(subjects);
     } catch (error) {
       console.error("Failed to fetch students:", error.message);
     } finally {
@@ -83,97 +123,143 @@ const Class = () => {
     }
   };
 
-  const transformData = (data, termType) => {
-    return data.map((student) => {
-      const term = student.terms.find((term) => term.termType === termType);
-      student.currentTerm = term ? term.subjects : [];
-      return student;
-    });
-  };
-  const handleTermChange = async (event) => {
-    const termType = event.target.value;
-    setTermType(termType);
-    await fetchStudentData(termType, selectedClass, academicYear);
+  const handleTermChange = async (e) => {
+    const value = e.target.value;
+    setTermType(value);
+    await fetchStudentData(value, selectedClass, academicYear);
   };
 
   const handleClassChange = async (e) => {
-    const selectedClass = e.target.value;
-    setSelectedClass(selectedClass);
-    await fetchStudentData(termType, selectedClass, academicYear);
+    const value = e.target.value;
+    setSelectedClass(value);
+    await fetchStudentData(termType, value, academicYear);
   };
 
-  const handleAcademicYearChange = async (event) => {
-    const academicYear = event.target.value;
-    setAcademicYear(academicYear);
-    await fetchStudentData(termType, selectedClass, academicYear);
+  const handleAcademicYearChange = async (e) => {
+    const value = e.target.value;
+    setAcademicYear(value);
+    await fetchStudentData(termType, selectedClass, value);
   };
 
-  const handleScoreChange = (studentId, subjectName, scoreType, value) => {
-    setUpdatedScores((prevState) => ({
-      ...prevState,
-      [studentId]: {
-        ...prevState[studentId],
+  const selectedStudent = students.find(
+    (s) => String(s.id) === String(selectedStudentId),
+  );
+
+  const isColumnVisible = (col) => {
+    if (!input.includes(col.key)) return false;
+    if (col.hideForSS && schoolName === UKP) {
+      return !selectedStudent?.level?.startsWith("ss");
+    }
+    return true;
+  };
+  const visibleColumns = COLUMNS.filter(isColumnVisible);
+
+  const getExistingSubject = (subjectName) =>
+    selectedStudent?.currentTerm?.find((s) => s.subjectName === subjectName);
+
+  const getValue = (subjectName, key) =>
+    updatedScores[selectedStudentId]?.[subjectName]?.[key] ??
+    getExistingSubject(subjectName)?.[key] ??
+    "";
+
+  const handleScoreChange = (subjectName, key, value) => {
+    setUpdatedScores((prev) => ({
+      ...prev,
+      [selectedStudentId]: {
+        ...prev[selectedStudentId],
         [subjectName]: {
-          ...prevState[studentId]?.[subjectName],
-          [scoreType]: parseFloat(value) || 0,
+          ...prev[selectedStudentId]?.[subjectName],
+          [key]: value, // keep the raw string so the field can be cleared
         },
       },
     }));
   };
 
-  const handleUpdateScores = async () => {
-    setLoading(true);
-    try {
-      const records = [];
-      for (const studentId of Object.keys(updatedScores)) {
-        const record = {
-          subjectName: selectedSubject,
-          scores: updatedScores[studentId][selectedSubject],
-        };
-        records.push({ studentId, record });
-      }
-      const { data } = await axios.patch(
-        `/api/student/class/${selectedClass}`,
-        { termType, records },
-      );
-      alert(data.message);
-    } catch (error) {
-      alert("Network Error. Please try again later.");
-      console.error("Failed to update scores:", error.message);
-    }
-    setLoading(false);
-  };
-
-  const calculateTotal = (student, subject) => {
-    const updatedSubjectScores = updatedScores[student.id]?.[subject] || {};
-    const existingSubjectScores =
-      student.currentTerm?.find((sub) => sub.subjectName === subject) || {};
-
-    const scores = {
-      ...existingSubjectScores,
-      ...updatedSubjectScores,
-    };
-
-    const total = input.reduce(
-      (acc, key) => acc + (parseFloat(scores[key]) || 0),
+  const calculateTotal = (subjectName) =>
+    input.reduce(
+      (acc, key) => acc + (parseFloat(getValue(subjectName, key)) || 0),
       0,
     );
 
-    return total;
+  const handleUpdateScores = async () => {
+    const edits = updatedScores[selectedStudentId] || {};
+
+    // One record per edited subject, containing only fields that were edited
+    // and are not empty.
+    const records = [];
+    for (const [subjectName, fields] of Object.entries(edits)) {
+      const scores = {};
+      for (const [key, raw] of Object.entries(fields)) {
+        if (raw === "" || raw === null || raw === undefined) continue;
+        const num = parseFloat(raw);
+        if (!Number.isNaN(num)) scores[key] = num;
+      }
+      if (Object.keys(scores).length > 0) {
+        records.push({
+          studentId: selectedStudentId,
+          record: { subjectName, scores },
+        });
+      }
+    }
+
+    if (records.length === 0) {
+      alert("No changes to save.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data } = await axios.patch(
+        `/api/student/class/${selectedClass}`,
+        {
+          termType,
+          records,
+        },
+      );
+      alert(data.message);
+
+      // Merge the saved scores into local data so the inputs keep showing them
+      // (no refetch, which can return stale/cached data).
+      setStudents((prev) =>
+        prev.map((s) => {
+          if (String(s.id) !== String(selectedStudentId)) return s;
+          const currentTerm = [...(s.currentTerm || [])];
+          for (const { record } of records) {
+            const idx = currentTerm.findIndex(
+              (x) => x.subjectName === record.subjectName,
+            );
+            if (idx >= 0) {
+              currentTerm[idx] = { ...currentTerm[idx], ...record.scores };
+            } else {
+              currentTerm.push({
+                subjectName: record.subjectName,
+                ...record.scores,
+              });
+            }
+          }
+          return { ...s, currentTerm };
+        }),
+      );
+
+      // Saved edits are now part of students, so clear the pending ones.
+      setUpdatedScores((prev) => {
+        const { [selectedStudentId]: _saved, ...rest } = prev;
+        return rest;
+      });
+    } catch (error) {
+      alert("Network Error. Please try again later.");
+      console.error("Failed to update scores:", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
-  students?.sort((a, b) => {
-    if (a.surname.toLowerCase() < b.surname.toLowerCase()) {
-      return -1;
-    }
-    if (a.surname.toLowerCase() > b.surname.toLowerCase()) {
-      return 1;
-    }
-    return 0;
-  });
+
+  const hasUnsavedChanges =
+    Object.keys(updatedScores[selectedStudentId] || {}).length > 0;
 
   return (
     <div className={styles.checkResult}>
-      <h1>Please select academic year, term, class, and subject.</h1>
+      <h1>Please select academic year, term, class, and student.</h1>
       <div className={styles.selectContainer}>
         <select
           id="academicYearSelect"
@@ -185,6 +271,7 @@ const Class = () => {
           </option>
           <option value="2026/2027">2026/2027</option>
         </select>
+
         <select id="termSelect" value={termType} onChange={handleTermChange}>
           <option value="" disabled>
             Select Term
@@ -193,6 +280,7 @@ const Class = () => {
           <option value="SECOND">Second Term</option>
           <option value="THIRD">Third Term</option>
         </select>
+
         <select value={selectedClass} onChange={handleClassChange}>
           <option value="" disabled>
             Select class
@@ -203,410 +291,75 @@ const Class = () => {
             </option>
           ))}
         </select>
+
         <select
-          id="subjects"
-          onChange={(e) => setSelectedSubject(e.target.value)}
-          value={selectedSubject}
+          id="students"
+          value={selectedStudentId}
+          onChange={(e) => setSelectedStudentId(e.target.value)}
         >
           <option value="" disabled>
-            {loading ? "Please wait..." : "Select Subject"}
+            {loading ? "Please wait..." : "Select Student"}
           </option>
-          {availableSubjects.map((subjectName, index) => (
-            <option key={index} value={subjectName}>
-              {subjectName}
+          {students.map((student) => (
+            <option key={student.id} value={student.id}>
+              {student.surname} {student.name}
             </option>
           ))}
         </select>
       </div>
-      {selectedClass && (
+
+      {selectedClass && selectedStudent && (
         <div className={styles.tableContainer}>
-          {selectedSubject && (
-            <div>
-              <table border={1}>
-                <thead>
-                  <tr>
-                    <th>No</th>
-                    <th>Surname</th>
-                    <th>Name</th>
-
-                    {(schoolName !== "THE UKP SCHOOLS" &&
-                      input.includes("rt")) ||
-                    (schoolName === "THE UKP SCHOOLS" &&
-                      input.includes("rt") &&
-                      !students[0]?.level.startsWith("ss")) ? (
-                      <th>R. T</th>
-                    ) : null}
-
-                    {input.includes("firstCA") && <th>CA 1</th>}
-                    {input.includes("secondCA") && <th>CA 2</th>}
-
-                    {input.includes("thirdCA") && <th>CA 3</th>}
-                    {input.includes("fourthCA") && <th>CA 4</th>}
-                    {input.includes("fifthCA") && <th>CA 5</th>}
-                    {input.includes("sixthCA") && <th>CA 6</th>}
-                    {input.includes("assignment") && <th>Ass</th>}
-                    {input.includes("project") && <th>Proj</th>}
-
-                    {(schoolName !== "THE UKP SCHOOLS" &&
-                      input.includes("affective")) ||
-                    (schoolName === "THE UKP SCHOOLS" &&
-                      input.includes("affective") &&
-                      !students[0]?.level.startsWith("ss")) ? (
-                      <th>Affective</th>
-                    ) : null}
-                    {(schoolName !== "THE UKP SCHOOLS" &&
-                      input.includes("note")) ||
-                    (schoolName === "THE UKP SCHOOLS" &&
-                      input.includes("note") &&
-                      !students[0]?.level.startsWith("ss")) ? (
-                      <th>Note</th>
-                    ) : null}
-
-                    {input.includes("exam") && <th>Exam</th>}
-
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((student, index) => (
-                    <tr key={student.id}>
-                      <td>{index + 1}</td>
-                      <td>{student.surname}</td>
-                      <td>{student.name}</td>
-
-                      {(schoolName !== "THE UKP SCHOOLS" &&
-                        input.includes("rt")) ||
-                        (schoolName === "THE UKP SCHOOLS" &&
-                          input.includes("rt") &&
-                          !students[0]?.level.startsWith("ss") && (
-                            <td>
-                              <input
-                                type="number"
-                                value={
-                                  updatedScores[student.id]?.[
-                                    selectedSubject
-                                  ]?.["rt"] ??
-                                  student.currentTerm?.find(
-                                    (subject) =>
-                                      subject.subjectName === selectedSubject,
-                                  )?.rt ??
-                                  ""
-                                }
-                                onChange={(e) =>
-                                  handleScoreChange(
-                                    student.id,
-                                    selectedSubject,
-                                    "rt",
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </td>
-                          ))}
-
-                      {input.includes("firstCA") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "firstCA"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.firstCA ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "firstCA",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-
-                      {input.includes("secondCA") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "secondCA"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.secondCA ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "secondCA",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      {input.includes("thirdCA") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "thirdCA"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.thirdCA ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "thirdCA",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      {input.includes("fourthCA") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "fourthCA"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.fourthCA ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "fourthCA",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      {input.includes("fifthCA") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "fifthCA"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.fifthCA ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "fifthCA",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      {input.includes("sixthCA") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "sixthCA"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.sixthCA ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "sixthCA",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      {input.includes("assignment") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "assignment"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.assignment ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "assignment",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      {input.includes("project") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "project"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.project ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "project",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-
-                      {(schoolName !== "THE UKP SCHOOLS" &&
-                        input.includes("affective")) ||
-                      (schoolName === "THE UKP SCHOOLS" &&
-                        input.includes("affective") &&
-                        !students[0]?.level.startsWith("ss")) ? (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "affective"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.affective ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "affective",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      ) : null}
-
-                      {(schoolName !== "THE UKP SCHOOLS" &&
-                        input.includes("note")) ||
-                      (schoolName === "THE UKP SCHOOLS" &&
-                        input.includes("note") &&
-                        !students[0]?.level.startsWith("ss")) ? (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "note"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.note ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "note",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      ) : null}
-
-                      {input.includes("exam") && (
-                        <td>
-                          <input
-                            type="number"
-                            value={
-                              updatedScores[student.id]?.[selectedSubject]?.[
-                                "exam"
-                              ] ??
-                              student.currentTerm?.find(
-                                (subject) =>
-                                  subject.subjectName === selectedSubject,
-                              )?.exam ??
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                student.id,
-                                selectedSubject,
-                                "exam",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                      )}
-                      <td className={styles.total}>
-                        {calculateTotal(student, selectedSubject)}
-                      </td>
-                    </tr>
+          <div>
+            <h2 className={styles.selectedStudents}>
+              {selectedStudent.surname} {selectedStudent.name}
+            </h2>
+            <table border={1}>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Subject</th>
+                  {visibleColumns.map((col) => (
+                    <th key={col.key}>{col.label}</th>
                   ))}
-                </tbody>
-              </table>
-              <button
-                onClick={handleUpdateScores}
-                className={loading && styles.disabled}
-                disabled={loading}
-              >
-                {loading ? "Updating..." : "Update Scores"}
-              </button>
-            </div>
-          )}
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {availableSubjects.map((subjectName, index) => (
+                  <tr key={subjectName}>
+                    <td>{index + 1}</td>
+                    <td>{subjectName}</td>
+                    {visibleColumns.map((col) => (
+                      <td key={col.key}>
+                        <input
+                          type="number"
+                          value={getValue(subjectName, col.key)}
+                          onChange={(e) =>
+                            handleScoreChange(
+                              subjectName,
+                              col.key,
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </td>
+                    ))}
+                    <td className={styles.total}>
+                      {calculateTotal(subjectName)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button
+              onClick={handleUpdateScores}
+              className={loading ? styles.disabled : undefined}
+              disabled={loading || !hasUnsavedChanges}
+            >
+              {loading ? "Updating..." : "Update Scores"}
+            </button>
+          </div>
         </div>
       )}
     </div>
