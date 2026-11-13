@@ -6,8 +6,6 @@ import axios from "axios";
 
 const UKP = "THE UKP SCHOOLS";
 
-// One place that describes every score column (kept in this page's original order).
-// hideForSS: for THE UKP SCHOOLS, hide this column for "ss" levels.
 const COLUMNS = [
   { key: "rt", label: "R. T", hideForSS: true },
   { key: "firstCA", label: "CA 1" },
@@ -27,9 +25,13 @@ const Class = () => {
   const [selectedClass, setSelectedClass] = useState("");
   const [students, setStudents] = useState([]);
   const [userClasses, setUserClasses] = useState([]);
-  const [userSubjects, setUserSubjects] = useState([]);
-  const [availableSubjects, setAvailableSubjects] = useState([]);
-  // Shape: { [studentId]: { [subjectName]: { [scoreKey]: rawInputString } } }
+  // New sessions carry subjectIds. Sessions created before the migration only
+  // carry names, so we fall back to names for them (remove once everyone has
+  // logged in again).
+  const [userSubjectIds, setUserSubjectIds] = useState(undefined);
+  const [userSubjectNames, setUserSubjectNames] = useState([]);
+  const [availableSubjects, setAvailableSubjects] = useState([]); // [{ id, name }]
+  // { [studentId]: { [subjectId]: { [scoreKey]: rawInputString } } }
   const [updatedScores, setUpdatedScores] = useState({});
   const [loading, setLoading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -41,12 +43,21 @@ const Class = () => {
 
   useEffect(() => {
     setUserClasses(session?.classes || []);
-    setUserSubjects(session?.subjects || []);
+    setUserSubjectIds(session?.subjectIds);
+    setUserSubjectNames(session?.subjects || []);
   }, [session]);
 
+  const isAllowed = (sub) =>
+    userSubjectIds
+      ? userSubjectIds.includes(sub.subjectId)
+      : userSubjectNames.includes(sub.subjectName);
+
+  const hasAnySubject = userSubjectIds
+    ? userSubjectIds.length > 0
+    : userSubjectNames.length > 0;
+
   const fetchStudentData = async (termType, selectedClass, academicYear) => {
-    if (!termType || !selectedClass || !academicYear || !userSubjects.length)
-      return;
+    if (!termType || !selectedClass || !academicYear || !hasAnySubject) return;
 
     setLoading(true);
     try {
@@ -60,35 +71,32 @@ const Class = () => {
       setSchoolName(res.data.name);
 
       const transformedData = data
-        .map((student) => {
-          const currentTerm = student.terms.find(
-            (term) => term.termType === termType,
-          );
-          return { ...student, currentTerm };
-        })
+        .map((student) => ({
+          ...student,
+          currentTerm: student.terms.find((t) => t.termType === termType),
+        }))
         .sort((a, b) =>
           a.surname
             .toLowerCase()
             .trim()
             .localeCompare(b.surname.toLowerCase().trim()),
         );
-
       setStudents(transformedData);
 
-      // Only the subjects this teacher is allowed to enter.
-      const subjects = Array.from(
-        new Set(
-          transformedData.flatMap(
-            (student) =>
-              student.currentTerm?.subjects
-                ?.filter((subject) =>
-                  userSubjects.includes(subject.subjectName),
-                )
-                .map((subject) => subject.subjectName) || [],
-          ),
-        ),
-      ).sort();
-      setAvailableSubjects(subjects);
+      // only the subjects this teacher is assigned to, keyed by id
+      const subjectMap = new Map();
+      for (const student of transformedData) {
+        for (const sub of student.currentTerm?.subjects || []) {
+          if (sub.subjectId != null && isAllowed(sub)) {
+            subjectMap.set(sub.subjectId, sub.subjectName);
+          }
+        }
+      }
+      setAvailableSubjects(
+        [...subjectMap]
+          .map(([id, name]) => ({ id, name }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
 
       setSelectedStudentId("");
       setUpdatedScores({});
@@ -99,21 +107,16 @@ const Class = () => {
   };
 
   const handleTermChange = async (e) => {
-    const value = e.target.value;
-    setTermType(value);
-    await fetchStudentData(value, selectedClass, academicYear);
+    setTermType(e.target.value);
+    await fetchStudentData(e.target.value, selectedClass, academicYear);
   };
-
   const handleClassChange = async (e) => {
-    const value = e.target.value;
-    setSelectedClass(value);
-    await fetchStudentData(termType, value, academicYear);
+    setSelectedClass(e.target.value);
+    await fetchStudentData(termType, e.target.value, academicYear);
   };
-
   const handleAcademicYearChange = async (e) => {
-    const value = e.target.value;
-    setAcademicYear(value);
-    await fetchStudentData(termType, selectedClass, value);
+    setAcademicYear(e.target.value);
+    await fetchStudentData(termType, selectedClass, e.target.value);
   };
 
   const selectedStudent = students.find(
@@ -129,41 +132,40 @@ const Class = () => {
   };
   const visibleColumns = COLUMNS.filter(isColumnVisible);
 
-  const getExistingSubject = (subjectName) =>
+  const getExistingSubject = (subjectId) =>
     selectedStudent?.currentTerm?.subjects?.find(
-      (s) => s.subjectName === subjectName,
+      (s) => s.subjectId === subjectId,
     );
 
-  const getValue = (subjectName, key) =>
-    updatedScores[selectedStudentId]?.[subjectName]?.[key] ??
-    getExistingSubject(subjectName)?.[key] ??
+  const getValue = (subjectId, key) =>
+    updatedScores[selectedStudentId]?.[subjectId]?.[key] ??
+    getExistingSubject(subjectId)?.[key] ??
     "";
 
-  const handleScoreChange = (subjectName, key, value) => {
+  const handleScoreChange = (subjectId, key, value) => {
     setUpdatedScores((prev) => ({
       ...prev,
       [selectedStudentId]: {
         ...prev[selectedStudentId],
-        [subjectName]: {
-          ...prev[selectedStudentId]?.[subjectName],
-          [key]: value, // raw string so the field can be cleared
+        [subjectId]: {
+          ...prev[selectedStudentId]?.[subjectId],
+          [key]: value,
         },
       },
     }));
   };
 
-  const calculateTotal = (subjectName) =>
+  const calculateTotal = (subjectId) =>
     input.reduce(
-      (acc, key) => acc + (parseFloat(getValue(subjectName, key)) || 0),
+      (acc, key) => acc + (parseFloat(getValue(subjectId, key)) || 0),
       0,
     );
 
   const handleUpdateScores = async () => {
     const edits = updatedScores[selectedStudentId] || {};
 
-    // One record per edited subject, with only non-empty edited fields.
     const records = [];
-    for (const [subjectName, fields] of Object.entries(edits)) {
+    for (const [subjectId, fields] of Object.entries(edits)) {
       const scores = {};
       for (const [key, raw] of Object.entries(fields)) {
         if (raw === "" || raw === null || raw === undefined) continue;
@@ -173,7 +175,7 @@ const Class = () => {
       if (Object.keys(scores).length > 0) {
         records.push({
           studentId: selectedStudentId,
-          record: { subjectName, scores },
+          record: { subjectId: Number(subjectId), scores },
         });
       }
     }
@@ -191,7 +193,6 @@ const Class = () => {
       );
       alert(data.message);
 
-      // Merge saved scores into local data so inputs keep showing them.
       setStudents((prev) =>
         prev.map((s) => {
           if (String(s.id) !== String(selectedStudentId)) return s;
@@ -199,13 +200,16 @@ const Class = () => {
           const subjects = [...(term.subjects || [])];
           for (const { record } of records) {
             const idx = subjects.findIndex(
-              (x) => x.subjectName === record.subjectName,
+              (x) => x.subjectId === record.subjectId,
             );
             if (idx >= 0) {
               subjects[idx] = { ...subjects[idx], ...record.scores };
             } else {
               subjects.push({
-                subjectName: record.subjectName,
+                subjectId: record.subjectId,
+                subjectName: availableSubjects.find(
+                  (a) => a.id === record.subjectId,
+                )?.name,
                 ...record.scores,
               });
             }
@@ -219,7 +223,10 @@ const Class = () => {
         return rest;
       });
     } catch (error) {
-      alert("Failed to update scores. Please try again later.");
+      alert(
+        error?.response?.data?.message ||
+          "Failed to update scores. Please try again later.",
+      );
       console.error("Failed to update scores:", error.message);
     } finally {
       setLoading(false);
@@ -296,18 +303,20 @@ const Class = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {availableSubjects.map((subjectName, index) => (
-                    <tr key={subjectName}>
+                  {availableSubjects.map((subject, index) => (
+                    <tr key={subject.id}>
                       <td>{index + 1}</td>
-                      <td>{subjectName}</td>
+                      <td>{subject.name}</td>
                       {visibleColumns.map((col) => (
                         <td key={col.key}>
                           <input
                             type="number"
-                            value={getValue(subjectName, col.key)}
+                            min="0"
+                            step="1"
+                            value={getValue(subject.id, col.key)}
                             onChange={(e) =>
                               handleScoreChange(
-                                subjectName,
+                                subject.id,
                                 col.key,
                                 e.target.value,
                               )
@@ -315,7 +324,7 @@ const Class = () => {
                           />
                         </td>
                       ))}
-                      <td className="total">{calculateTotal(subjectName)}</td>
+                      <td className="total">{calculateTotal(subject.id)}</td>
                     </tr>
                   ))}
                 </tbody>

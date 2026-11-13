@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./newSubject.module.css";
 import { signOut, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
@@ -7,230 +7,150 @@ import axios from "axios";
 import AlertDialog from "@/components/others/AlertDialog";
 import Spinner from "@/components/Spinner/Spinner";
 
+const apiMessage = (err, fallback) => err?.response?.data?.message || fallback;
+const byName = (a, b) => a.name.localeCompare(b.name);
+
 const NewSubject = () => {
   const [selectedClass, setSelectedClass] = useState("");
   const [newSubject, setNewSubject] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [editingSubject, setEditingSubject] = useState(null);
-  const [editedSubjectName, setEditedSubjectName] = useState("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editedName, setEditedName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [schoolSubjects, setSchoolSubjects] = useState([]);
+  const [schoolSubjects, setSchoolSubjects] = useState([]); // [{ id, name }]
   const [schoolClasses, setSchoolClasses] = useState([]);
   const { data: session, status: sessionStatus } = useSession();
   const [alertMessage, setAlertMessage] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [openAlert, setOpenAlert] = useState(false);
 
+  const showAlert = (message) => {
+    setAlertMessage(message);
+    setOpenAlert(true);
+  };
+
   useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      if (session.role !== "ADMIN") {
-        signOut();
-        redirect("/");
-      }
+    if (sessionStatus === "authenticated" && session.role !== "ADMIN") {
+      signOut({ callbackUrl: "/" });
     }
   }, [sessionStatus, session]);
 
-  const handleAcademicYearChange = (event) => {
-    setAcademicYear(event.target.value);
-  };
-
   useEffect(() => {
-    const fetchSchoolClasses = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        setSchoolClasses(data.classes.sort() || []);
-        setSchoolSubjects(data.subjects.sort() || []);
+        const [school, subjects] = await Promise.all([
+          axios.get(`/api/school/${session.schoolId}`),
+          axios.get(`/api/school/subjects?schoolId=${session.schoolId}`),
+        ]);
+
+        setSchoolClasses(school.data.classes?.sort() || []);
+        setSchoolSubjects((subjects.data.subjects || []).sort(byName));
       } catch (error) {
-        console.error("Error fetching school classes:", error);
+        console.error("Error fetching school data:", error);
       }
     };
-
-    if (session?.schoolId) {
-      fetchSchoolClasses();
-    }
+    if (session?.schoolId) fetchData();
   }, [session]);
-
-  const handleEditSubject = (subject) => {
-    setEditingSubject(subject);
-    setEditedSubjectName(subject);
-  };
-
-  const saveEditedSubject = async () => {
-    const trimmedEditedSubjectName = editedSubjectName.trim();
-    if (!trimmedEditedSubjectName) {
-      setAlertMessage("Please enter a valid subject name.");
-      setOpenAlert(true);
-      return;
-    }
-    setLoading(true);
-    try {
-      const updatedSubjects = schoolSubjects.map((subject) =>
-        subject === editingSubject ? trimmedEditedSubjectName : subject,
-      );
-      const { data } = await axios.patch(`/api/school/${session.schoolId}`, {
-        subjects: updatedSubjects,
-      });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
-      setSchoolSubjects(updatedSubjects);
-      setEditingSubject(null);
-      setEditedSubjectName("");
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClassChange = (e) => {
-    setSelectedClass(e.target.value);
-  };
-
-  const handleSubjectChange = (e) => {
-    setSelectedSubject(e.target.value);
-  };
 
   const createSubject = async (e) => {
     e.preventDefault();
-    const trimmedNewSubject = newSubject.trim();
-    if (!trimmedNewSubject) {
-      setAlertMessage("Please enter a valid subject name.");
-      setOpenAlert(true);
-      return;
-    }
-    const subjectExists = schoolSubjects.some(
-      (subject) => subject.toLowerCase() === trimmedNewSubject.toLowerCase(),
-    );
-    if (subjectExists) {
-      setAlertMessage("Subject already exists.");
-      setOpenAlert(true);
+    if (!newSubject.trim()) {
+      showAlert("Please enter a valid subject name.");
       return;
     }
     setLoading(true);
     try {
-      const updatedSubjects = [...schoolSubjects, trimmedNewSubject];
-      const { data } = await axios.patch(`/api/school/${session.schoolId}`, {
-        subjects: updatedSubjects,
+      const { data } = await axios.post("/api/school/subjects", {
+        schoolId: session.schoolId,
+        name: newSubject,
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
-      setSchoolSubjects(updatedSubjects);
+      setSchoolSubjects((prev) => [...prev, data.subject].sort(byName));
       setNewSubject("");
+      showAlert(data.message);
     } catch (err) {
-      console.log(err);
+      showAlert(apiMessage(err, "Failed to create subject."));
     } finally {
       setLoading(false);
     }
   };
 
-  const addSubject = async () => {
-    if (!academicYear || !selectedClass || !selectedSubject) {
-      setAlertMessage(
-        "Please select from academicYear, Class, Subject, and Term.",
-      );
-      setOpenAlert(true);
+  const startEditing = (subject) => {
+    setEditingId(subject.id);
+    setEditedName(subject.name);
+  };
+
+  // Renaming changes ONE row. Every student and teacher linked to it
+  // picks up the new name automatically.
+  const saveEditedSubject = async () => {
+    if (!editedName.trim()) {
+      showAlert("Please enter a valid subject name.");
       return;
     }
     setLoading(true);
     try {
-      const className = selectedClass.split("-");
-      const { data } = await axios.post("/api/subject", {
-        className: className[0],
-        variant: className[1],
-        subjectName: selectedSubject,
-        schoolId: session.schoolId,
-        academicYear: academicYear,
+      const { data } = await axios.patch(`/api/school/subjects/${editingId}`, {
+        name: editedName,
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
-    } catch (error) {
-      console.error("Error adding subject:", error);
+      setSchoolSubjects((prev) =>
+        prev.map((s) => (s.id === editingId ? data.subject : s)).sort(byName),
+      );
+      setEditingId(null);
+      setEditedName("");
+      showAlert(data.message);
+    } catch (err) {
+      showAlert(apiMessage(err, "Failed to rename subject."));
     } finally {
       setLoading(false);
     }
   };
-  const editSubject = async () => {
-    const trimmedNewSubject = newSubject.trim();
+
+  const classPayload = () => {
+    const [className, variant] = selectedClass.split("-");
+    return {
+      className,
+      variant,
+      subjectId: Number(selectedSubjectId),
+      schoolId: session.schoolId,
+      academicYear,
+    };
+  };
+
+  const addSubjectToClass = async () => {
+    if (!academicYear || !selectedClass || !selectedSubjectId) {
+      showAlert("Please select academic year, class and subject.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await axios.post("/api/subject", classPayload());
+      showAlert(data.message);
+    } catch (err) {
+      showAlert(apiMessage(err, "Error adding subject to class."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeSubjectFromClass = async () => {
+    if (!academicYear || !selectedClass || !selectedSubjectId) {
+      showAlert("Please select academic year, class and subject.");
+      return;
+    }
     if (
-      !academicYear ||
-      !selectedClass ||
-      !selectedSubject ||
-      !trimmedNewSubject
+      !confirm(
+        "Removing this subject from the class also deletes the students' scores for it. Continue?",
+      )
     ) {
-      setAlertMessage(
-        "Please enter new subject, select from academicYear, Class and old Subject.",
-      );
-      setOpenAlert(true);
       return;
     }
     setLoading(true);
     try {
-      const className = selectedClass.split("-");
-      const { data } = await axios.put("/api/subject", {
-        className: className[0],
-        variant: className[1],
-        schoolId: session.schoolId,
-        academicYear: academicYear,
-        currentSubjectName: selectedSubject,
-        newSubjectName: trimmedNewSubject,
-      });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
-    } catch (error) {
-      console.error("Error adding subject:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  const removeSubject = async () => {
-    if (!academicYear || !selectedClass || !selectedSubject) {
-      setAlertMessage(
-        "Please select from academicYear, Class, Subject, and Term.",
-      );
-      setOpenAlert(true);
-      return;
-    }
-    setLoading(true);
-    try {
-      const className = selectedClass.split("-");
       const { data } = await axios.delete("/api/subject", {
-        data: {
-          className: className[0],
-          variant: className[1],
-          subjectName: selectedSubject,
-          schoolId: session.schoolId,
-          academicYear: academicYear,
-        },
+        data: classPayload(),
       });
-      setAlertMessage(data.message);
-      setOpenAlert(true);
-    } catch (error) {
-      console.error("Error removing subject:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteSubject = async (subjectName) => {
-    if (!confirm(`Are you sure you want to delete ${subjectName}?`)) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data } = await axios.delete(
-        `/api/school/subject/${session.schoolId}-${subjectName}`,
-        {
-          data: { schoolId: session.schoolId, subjectName },
-        },
-      );
-      setAlertMessage(data.message);
-      setOpenAlert(true);
-      setSchoolSubjects(
-        schoolSubjects.filter((subject) => subject !== subjectName),
-      );
+      showAlert(data.message);
     } catch (err) {
-      console.log(err);
+      showAlert(apiMessage(err, "Error removing subject from class."));
     } finally {
       setLoading(false);
     }
@@ -250,7 +170,7 @@ const NewSubject = () => {
         This is where you add or remove subjects to/from a particular class.
       </h1>
       <h2>
-        Select academicYear, class and subject that you want to add or remove.
+        Select academic year, class and subject that you want to add or remove.
       </h2>
 
       {openAlert && (
@@ -269,7 +189,7 @@ const NewSubject = () => {
           className={loading ? styles.disabled : ""}
           onClick={createSubject}
         >
-          {loading ? "please wait.." : "Create Subject"}{" "}
+          {loading ? "please wait.." : "Create Subject"}
         </button>
       </div>
 
@@ -277,15 +197,18 @@ const NewSubject = () => {
         <select
           id="academicYearSelect"
           value={academicYear}
-          onChange={handleAcademicYearChange}
+          onChange={(e) => setAcademicYear(e.target.value)}
         >
           <option value="" disabled>
-            Select academy year
+            Select academic year
           </option>
           <option value="2026/2027">2026/2027</option>
         </select>
 
-        <select value={selectedClass} onChange={handleClassChange}>
+        <select
+          value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+        >
           <option value="" disabled>
             Select class
           </option>
@@ -295,13 +218,17 @@ const NewSubject = () => {
             </option>
           ))}
         </select>
-        <select value={selectedSubject} onChange={handleSubjectChange}>
+
+        <select
+          value={selectedSubjectId}
+          onChange={(e) => setSelectedSubjectId(e.target.value)}
+        >
           <option disabled value="">
             Select subject
           </option>
           {schoolSubjects.map((subject) => (
-            <option key={subject} value={subject}>
-              {subject}
+            <option key={subject.id} value={subject.id}>
+              {subject.name}
             </option>
           ))}
         </select>
@@ -310,44 +237,37 @@ const NewSubject = () => {
           <button
             className={loading ? styles.disabled : ""}
             disabled={loading}
-            onClick={addSubject}
+            onClick={addSubjectToClass}
           >
             {loading ? "please wait..." : "Add Subject"}
           </button>
           <button
             className={loading ? styles.disabled : ""}
             disabled={loading}
-            onClick={removeSubject}
+            onClick={removeSubjectFromClass}
           >
             {loading ? "please wait..." : "Remove Subject"}
-          </button>
-          <button
-            className={loading ? styles.disabled : ""}
-            disabled={loading}
-            onClick={editSubject}
-          >
-            {loading ? "please wait..." : "Edit Subject"}
           </button>
         </div>
       </div>
 
       <div className={styles.subjects}>
         <h2>All School Subjects will appear below.</h2>
-        <h2>You created ({schoolSubjects?.length}) subjects</h2>
+        <h2>You created ({schoolSubjects.length}) subjects</h2>
         <ul>
           {schoolSubjects.map((subject) => (
-            <li key={subject}>
-              {editingSubject === subject ? (
+            <li key={subject.id}>
+              {editingId === subject.id ? (
                 <input
                   autoFocus
-                  value={editedSubjectName}
-                  onChange={(e) => setEditedSubjectName(e.target.value)}
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
                 />
               ) : (
-                subject
+                subject.name
               )}
               <span>
-                {editingSubject === subject ? (
+                {editingId === subject.id ? (
                   <div style={{ display: "flex" }}>
                     <button
                       disabled={loading}
@@ -359,7 +279,7 @@ const NewSubject = () => {
                     <button
                       disabled={loading}
                       className={styles.save}
-                      onClick={() => setEditingSubject(null)}
+                      onClick={() => setEditingId(null)}
                     >
                       Cancel
                     </button>
@@ -368,15 +288,9 @@ const NewSubject = () => {
                   <div style={{ display: "flex" }}>
                     <button
                       className={styles.edit}
-                      onClick={() => handleEditSubject(subject)}
+                      onClick={() => startEditing(subject)}
                     >
-                      Edit
-                    </button>
-                    <button
-                      className={styles.delete}
-                      onClick={() => deleteSubject(subject)}
-                    >
-                      Delete
+                      Rename
                     </button>
                   </div>
                 )}

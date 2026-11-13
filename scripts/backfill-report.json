@@ -1,0 +1,78 @@
+{
+  "mode": "APPLY",
+  "createOrphans": true,
+  "schools": {
+    "1": {
+      "name": "THE UKP SCHOOLS",
+      "created": [],
+      "linkedExact": 0,
+      "linkedRenamed": 0,
+      "conflicts": [],
+      "orphanSubjectRows": {},
+      "teachers": {
+        "connected": 0,
+        "unresolved": []
+      }
+    },
+    "2": {
+      "name": "SOLID ROCK ACADEMY",
+      "created": [],
+      "linkedExact": 0,
+      "linkedRenamed": 0,
+      "conflicts": [],
+      "orphanSubjectRows": {},
+      "teachers": {
+        "connected": 0,
+        "unresolved": []
+      }
+    },
+    "3": {
+      "name": "New Cambridge",
+      "created": [],
+      "linkedExact": 0,
+      "linkedRenamed": 0,
+      "conflicts": [],
+      "orphanSubjectRows": {},
+      "teachers": {
+        "connected": 0,
+        "unresolved": []
+      }
+    },
+    "4": {
+      "name": "Jayrose fruitful aca..",
+      "created": [],
+      "linkedExact": 0,
+      "linkedRenamed": 0,
+      "conflicts": [],
+      "orphanSubjectRows": {},
+      "teachers": {
+        "connected": 0,
+        "unresolved": []
+      }
+    },
+    "6": {
+      "name": "CRYSTAL BRAINS SCHOOL",
+      "created": [],
+      "linkedExact": 0,
+      "linkedRenamed": 0,
+      "conflicts": [],
+      "orphanSubjectRows": {},
+      "teachers": {
+        "connected": 0,
+        "unresolved": []
+      }
+    },
+    "7": {
+      "name": "Beida Basic School",
+      "created": [],
+      "linkedExact": 0,
+      "linkedRenamed": 0,
+      "conflicts": [],
+      "orphanSubjectRows": {},
+      "teachers": {
+        "connected": 0,
+        "unresolved": []
+      }
+    }
+  }
+}

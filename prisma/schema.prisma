@@ -27,9 +27,25 @@ model School {
   assignments  Assignment[]
   classes      String[]     @default([])
   subjects     String[]     @default([])
+  schoolSubjects SchoolSubject[]
   termDates    TermDate[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+}
+
+model SchoolSubject {
+  id        Int       @id @default(autoincrement())
+  schoolId  Int
+  name      String
+  archived  Boolean   @default(false) // use this instead of deleting
+  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  scores    Subject[] // every student's score row for this subject
+  teachers  User[]    @relation("TeacherSubjects")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
 }
 
 model User {
@@ -42,6 +58,7 @@ model User {
   teacherOf   String[]     @default([])
   classes     String[]     @default([])
   subjects    String[]     @default([])
+  assignedSubjects SchoolSubject[] @relation("TeacherSubjects")
   role        Role         @default(USER)
   assignments Assignment[] @relation("TeacherAssignments")
   createdAt   DateTime     @default(now())
@@ -129,6 +146,10 @@ model Term {
 model Subject {
   id          Int    @id @default(autoincrement())
   subjectName String
+  schoolSubjectId Int?
+  schoolSubject   SchoolSubject? @relation(fields: [schoolSubjectId], references: [id], onDelete: Restrict)
+
+  @@index([schoolSubjectId])
   firstCA     Int?
   secondCA    Int?
   thirdCA     Int?
@@ -142,10 +163,11 @@ model Subject {
   assignment  Int?
   exam        Int?
   termId      Int?
-  term        Term?  @relation(fields: [termId], references: [id])
+  term        Term?  @relation(fields: [termId], references: [id], onDelete: Cascade)
 
   @@unique([subjectName, termId], name: "unique_subject_per_term")
 }
+
 model Payment {
   id        Int           @id @default(autoincrement())
   studentId Int

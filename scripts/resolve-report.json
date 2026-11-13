@@ -1,0 +1,54 @@
+{
+  "mode": "APPLY",
+  "schools": {
+    "1": {
+      "name": "THE UKP SCHOOLS",
+      "duplicateGroups": 201,
+      "keptRowWithValues": 75,
+      "keptOldestOfAllEmpty": 126,
+      "skippedNeedHuman": 0,
+      "emptyRowsToDelete": 203
+    },
+    "2": {
+      "name": "SOLID ROCK ACADEMY",
+      "duplicateGroups": 6,
+      "keptRowWithValues": 0,
+      "keptOldestOfAllEmpty": 6,
+      "skippedNeedHuman": 0,
+      "emptyRowsToDelete": 6
+    },
+    "3": {
+      "name": "New Cambridge",
+      "duplicateGroups": 15,
+      "keptRowWithValues": 0,
+      "keptOldestOfAllEmpty": 15,
+      "skippedNeedHuman": 0,
+      "emptyRowsToDelete": 15
+    },
+    "4": {
+      "name": "Jayrose fruitful aca..",
+      "duplicateGroups": 288,
+      "keptRowWithValues": 0,
+      "keptOldestOfAllEmpty": 288,
+      "skippedNeedHuman": 0,
+      "emptyRowsToDelete": 288
+    },
+    "6": {
+      "name": "CRYSTAL BRAINS SCHOOL",
+      "duplicateGroups": 670,
+      "keptRowWithValues": 1,
+      "keptOldestOfAllEmpty": 669,
+      "skippedNeedHuman": 0,
+      "emptyRowsToDelete": 728
+    },
+    "7": {
+      "name": "Beida Basic School",
+      "duplicateGroups": 0,
+      "keptRowWithValues": 0,
+      "keptOldestOfAllEmpty": 0,
+      "skippedNeedHuman": 0,
+      "emptyRowsToDelete": 0
+    }
+  },
+  "skipped": []
+}

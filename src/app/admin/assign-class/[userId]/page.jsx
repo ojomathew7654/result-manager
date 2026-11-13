@@ -6,12 +6,14 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/Spinner/Spinner";
 
+const apiMessage = (err, fallback) => err?.response?.data?.message || fallback;
+
 const EditUser = ({ params }) => {
   const { userId } = params;
   const [user, setUser] = useState(null);
-  const [selectedSubjects, setSelectedSubjects] = useState([]);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState([]);
   const [selectedClasses, setSelectedClasses] = useState([]);
-  const [schoolSubjects, setSchoolSubjects] = useState([]);
+  const [schoolSubjects, setSchoolSubjects] = useState([]); // [{ id, name }]
   const [schoolClasses, setSchoolClasses] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -23,44 +25,52 @@ const EditUser = ({ params }) => {
       const { data } = await axios.get(`/api/users/${userId}`);
       setUser(data);
       setSelectedClasses(data.classes || []);
-      setSelectedSubjects(data.subjects || []);
+      setSelectedSubjectIds(data.subjectIds || []);
       setTeacherClasses(data.teacherOf || []);
     };
     fetchUserData();
   }, [userId]);
 
   useEffect(() => {
-    const fetchSchoolClasses = async () => {
+    const fetchSchoolData = async () => {
       try {
-        const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        const sortedClasses = data.classes ? data.classes.sort() : [];
-        const sortedSubjects = data.subjects ? data.subjects.sort() : [];
-        setSchoolClasses(sortedClasses || []);
-        setSchoolSubjects(sortedSubjects || []);
+        const [school, subjects] = await Promise.all([
+          axios.get(`/api/school/${session.schoolId}`),
+          axios.get(`/api/schoolsubjects?schoolId=${session.schoolId}`),
+        ]);
+        setSchoolClasses(school.data.classes ? school.data.classes.sort() : []);
+        setSchoolSubjects(
+          (subjects.data.subjects || []).sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
+        );
       } catch (error) {
-        console.error("Error fetching school classes:", error);
+        console.error("Error fetching school data:", error);
       }
     };
-    if (session?.schoolId) {
-      fetchSchoolClasses();
-    }
+    if (session?.schoolId) fetchSchoolData();
   }, [session]);
 
   useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      if (session.role !== "ADMIN") {
-        signOut();
-        router.push("/");
-      }
+    if (sessionStatus === "authenticated" && session.role !== "ADMIN") {
+      signOut();
+      router.push("/");
     }
   }, [sessionStatus, session, router]);
+
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") router.push("/");
+  }, [sessionStatus, router]);
+
   if (sessionStatus === "loading")
     return (
       <h1 className="waitH1">
         <Spinner /> Please wait...
       </h1>
     );
-  if (sessionStatus !== "authenticated") router.push("/");
+  if (sessionStatus !== "authenticated") return null;
+
+  const nameOf = (id) => schoolSubjects.find((s) => s.id === id)?.name;
 
   const addClass = async () => {
     setLoading(true);
@@ -79,11 +89,11 @@ const EditUser = ({ params }) => {
     setLoading(true);
     try {
       const { data } = await axios.patch(`/api/teacher/addsubject/${userId}`, {
-        subjectsToAdd: selectedSubjects,
+        subjectIds: selectedSubjectIds,
       });
       alert(data.message);
     } catch (err) {
-      alert("Error Adding Subject");
+      alert(apiMessage(err, "Error Adding Subject"));
     }
     setLoading(false);
   };
@@ -101,35 +111,13 @@ const EditUser = ({ params }) => {
     setLoading(false);
   };
 
-  const handleSubjectChange = (subject) => {
-    setSelectedSubjects((prevSelectedSubjects) => {
-      if (prevSelectedSubjects.includes(subject)) {
-        return prevSelectedSubjects.filter((s) => s !== subject);
-      } else {
-        return [...prevSelectedSubjects, subject];
-      }
-    });
-  };
-
-  const handleClassChange = (classItem) => {
-    setSelectedClasses((prevSelectedClasses) => {
-      if (prevSelectedClasses.includes(classItem)) {
-        return prevSelectedClasses.filter((s) => s !== classItem);
-      } else {
-        return [...prevSelectedClasses, classItem];
-      }
-    });
-  };
-
-  const handleTeacherClassChange = (classItem) => {
-    setTeacherClasses((prevTeacherClasses) => {
-      if (prevTeacherClasses.includes(classItem)) {
-        return prevTeacherClasses.filter((c) => c !== classItem);
-      } else {
-        return [...prevTeacherClasses, classItem];
-      }
-    });
-  };
+  const toggle = (setter) => (value) =>
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+  const handleSubjectChange = toggle(setSelectedSubjectIds);
+  const handleClassChange = toggle(setSelectedClasses);
+  const handleTeacherClassChange = toggle(setTeacherClasses);
 
   if (!user)
     return (
@@ -151,27 +139,27 @@ const EditUser = ({ params }) => {
         <div className={styles.div1}>
           <h3>Select subject for this teacher</h3>
           {schoolSubjects.map((subject) => (
-            <div className={styles.checkbox} key={`subject-${subject}`}>
+            <div className={styles.checkbox} key={`subject-${subject.id}`}>
               <input
                 type="checkbox"
-                id={`subject-${subject}`}
-                value={subject}
-                checked={selectedSubjects.includes(subject)}
-                onChange={() => handleSubjectChange(subject)}
+                id={`subject-${subject.id}`}
+                value={subject.id}
+                checked={selectedSubjectIds.includes(subject.id)}
+                onChange={() => handleSubjectChange(subject.id)}
               />
-              <label htmlFor={`subject-${subject}`}>{subject}</label>
+              <label htmlFor={`subject-${subject.id}`}>{subject.name}</label>
             </div>
           ))}
           <div>
             <h3>Selected subjects for {user.username} will appear here.</h3>
             <ul>
-              {selectedSubjects.map((subject) => (
-                <li key={subject}>{subject}</li>
+              {selectedSubjectIds.map((id) => (
+                <li key={id}>{nameOf(id)}</li>
               ))}
             </ul>
             <div className={styles.btnContainer}>
               <button
-                className={loading && styles.disabled}
+                className={loading ? styles.disabled : undefined}
                 disabled={loading}
                 onClick={addSubject}
               >
@@ -203,7 +191,7 @@ const EditUser = ({ params }) => {
             </ul>
             <div className={styles.btnContainer}>
               <button
-                className={loading && styles.disabled}
+                className={loading ? styles.disabled : undefined}
                 disabled={loading}
                 onClick={addClass}
               >
@@ -238,7 +226,7 @@ const EditUser = ({ params }) => {
             </ul>
             <div className={styles.btnContainer}>
               <button
-                className={loading && styles.disabled}
+                className={loading ? styles.disabled : undefined}
                 disabled={loading}
                 onClick={addTeacherClasses}
               >
