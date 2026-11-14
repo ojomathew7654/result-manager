@@ -47,13 +47,13 @@ export async function PATCH(request, { params }) {
 
     return NextResponse.json(
       { message: "School data updated successfully" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (err) {
     console.error("Error:", err);
     return NextResponse.json(
       { error: "Failed to update School or Term Date" },
-      { status: 500 }
+      { status: 500 },
     );
   } finally {
     await prisma.$disconnect();
@@ -61,20 +61,27 @@ export async function PATCH(request, { params }) {
 }
 
 export async function GET(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
+  const schoolId = Number(id);
+
+  if (!Number.isInteger(schoolId)) {
+    return NextResponse.json({ error: "Invalid school id" }, { status: 400 });
+  }
+
   try {
     const school = await prisma.school.findUnique({
-      where: { id: Number(id) },
-      include: {
-        termDates: true,
-      },
+      where: { id: schoolId },
+      include: { termDates: true },
     });
+    if (!school) {
+      return NextResponse.json({ error: "School not found" }, { status: 404 });
+    }
     return NextResponse.json(school);
   } catch (error) {
     console.error("Error fetching school:", error);
     return NextResponse.json(
       { error: "Failed to fetch school" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -87,13 +94,13 @@ export async function DELETE(request, { params }) {
     });
     return NextResponse.json(
       { message: "School deleted successfully" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error delete School:", error);
     return NextResponse.json(
       { error: "Failed to delete School" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

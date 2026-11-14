@@ -40,9 +40,8 @@ const NewSubject = () => {
       try {
         const [school, subjects] = await Promise.all([
           axios.get(`/api/school/${session.schoolId}`),
-          axios.get(`/api/school/subjects?schoolId=${session.schoolId}`),
+          axios.get(`/api/school/subject/${session.schoolId}`),
         ]);
-
         setSchoolClasses(school.data.classes?.sort() || []);
         setSchoolSubjects((subjects.data.subjects || []).sort(byName));
       } catch (error) {
@@ -60,7 +59,7 @@ const NewSubject = () => {
     }
     setLoading(true);
     try {
-      const { data } = await axios.post("/api/school/subjects", {
+      const { data } = await axios.post("/api/school/subject/create", {
         schoolId: session.schoolId,
         name: newSubject,
       });
@@ -88,7 +87,7 @@ const NewSubject = () => {
     }
     setLoading(true);
     try {
-      const { data } = await axios.patch(`/api/school/subjects/${editingId}`, {
+      const { data } = await axios.patch(`/api/school/subject/${editingId}`, {
         name: editedName,
       });
       setSchoolSubjects((prev) =>

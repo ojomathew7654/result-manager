@@ -36,7 +36,7 @@ const EditUser = ({ params }) => {
       try {
         const [school, subjects] = await Promise.all([
           axios.get(`/api/school/${session.schoolId}`),
-          axios.get(`/api/schoolsubjects?schoolId=${session.schoolId}`),
+          axios.get(`/api/school/subject/${session.schoolId}`),
         ]);
         setSchoolClasses(school.data.classes ? school.data.classes.sort() : []);
         setSchoolSubjects(

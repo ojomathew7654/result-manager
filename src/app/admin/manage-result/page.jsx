@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styles from "./check-result.module.css";
 import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
@@ -23,33 +23,78 @@ const COLUMNS = [
   { key: "exam", label: "Exam" },
 ];
 
+// Returns a new array of new objects (never mutates the API response).
+const transformData = (data, termType) =>
+  (Array.isArray(data) ? data : [])
+    .map((student) => {
+      const term = student.terms?.find((t) => t.termType === termType);
+      return { ...student, currentTerm: term?.subjects ?? [] };
+    })
+    .sort((a, b) =>
+      (a.surname ?? "")
+        .toLowerCase()
+        .localeCompare((b.surname ?? "").toLowerCase()),
+    );
+
+// Every subject in the class, keyed by schoolSubjectId. Names are display only.
+const buildSubjectList = (students) => {
+  const map = new Map();
+  for (const student of students) {
+    for (const sub of student.currentTerm) {
+      if (sub.schoolSubjectId != null) {
+        map.set(sub.schoolSubjectId, sub.subjectName ?? "Unknown subject");
+      }
+    }
+  }
+  return [...map]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+};
+
 const Class = () => {
+  const { data: session, status: sessionStatus } = useSession();
+
   const [students, setStudents] = useState([]);
-  // [{ id, name }] - subjects are identified by id, the name is display only
+  // [{ id, name }] where id is the schoolSubjectId
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [schoolClasses, setSchoolClasses] = useState([]);
-  const [selectedStudentId, setSelectedStudentId] = useState("");
-  // { [studentId]: { [subjectId]: { [scoreKey]: rawInputString } } }
-  const [updatedScores, setUpdatedScores] = useState({});
+  const [schoolName, setSchoolName] = useState("");
   const [input, setInput] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const { data: session, status: sessionStatus } = useSession();
+
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  // { [studentId]: { [schoolSubjectId]: { [scoreKey]: rawInputString } } }
+  const [updatedScores, setUpdatedScores] = useState({});
+
   const [selectedClass, setSelectedClass] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [termType, setTermType] = useState("");
-  const [schoolName, setSchoolName] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // Ignore responses from older requests when the user changes filters quickly.
+  const requestId = useRef(0);
+
+  // Load school info (classes, name, enabled score columns) once.
   useEffect(() => {
-    const fetchSchoolClasses = async () => {
+    if (!session?.schoolId) return;
+    let cancelled = false;
+
+    const fetchSchool = async () => {
       try {
         const { data } = await axios.get(`/api/school/${session.schoolId}`);
-        setSchoolClasses(data.classes?.sort() || []);
+        if (cancelled || !data) return;
+        setSchoolClasses([...(data.classes || [])].sort());
+        setSchoolName(data.name || "");
+        setInput(data.input || []);
       } catch (error) {
-        console.error("Error fetching school classes:", error);
+        console.error("Error fetching school:", error);
       }
     };
-    if (session?.schoolId) fetchSchoolClasses();
-  }, [session]);
+    fetchSchool();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.schoolId]);
 
   useEffect(() => {
     if (sessionStatus === "authenticated" && session.role !== "ADMIN") {
@@ -63,67 +108,55 @@ const Class = () => {
         <Spinner /> Please wait...
       </h1>
     );
-  if (sessionStatus !== "authenticated") redirect("/");
+  if (sessionStatus !== "authenticated" || session.role !== "ADMIN")
+    redirect("/");
 
-  const transformData = (data, termType) =>
-    data
-      .map((student) => {
-        const term = student.terms.find((t) => t.termType === termType);
-        student.currentTerm = term ? term.subjects : [];
-        return student;
-      })
-      .sort((a, b) =>
-        a.surname.toLowerCase().localeCompare(b.surname.toLowerCase()),
-      );
+  const fetchStudentData = async (term, className, year) => {
+    // Clear stale data if any filter is missing.
+    if (!term || !className || !year) {
+      setStudents([]);
+      setAvailableSubjects([]);
+      setSelectedStudentId("");
+      setUpdatedScores({});
+      return;
+    }
 
-  const fetchStudentData = async (termType, selectedClass, academicYear) => {
-    if (!termType || !selectedClass || !academicYear) return;
-    const encodedAcademicYear = encodeURIComponent(academicYear);
+    const thisRequest = ++requestId.current;
+    const encodedYear = encodeURIComponent(year);
+
     try {
       setLoading(true);
       const { data } = await axios.get(
-        `/api/student/class/result/${termType}-${session.schoolId}-${encodedAcademicYear}-${selectedClass}`,
+        `/api/student/class/result/${term}-${session.schoolId}-${encodedYear}-${className}`,
       );
-      const res = await axios.get(`/api/school/${session.schoolId}`);
-      setSchoolName(res.data.name);
-      setInput(res.data.input);
+      if (thisRequest !== requestId.current) return; // a newer request won
 
-      const transformedData = transformData(data, termType);
-      setStudents(transformedData);
+      const transformed = transformData(data, term);
+      setStudents(transformed);
+      setAvailableSubjects(buildSubjectList(transformed));
       setSelectedStudentId("");
       setUpdatedScores({});
-
-      // every subject in the class, keyed by id (names are always current)
-      const subjectMap = new Map();
-      for (const student of transformedData) {
-        for (const sub of student.currentTerm || []) {
-          if (sub.subjectId != null)
-            subjectMap.set(sub.subjectId, sub.subjectName);
-        }
-      }
-      setAvailableSubjects(
-        [...subjectMap]
-          .map(([id, name]) => ({ id, name }))
-          .sort((a, b) => a.name.localeCompare(b.name)),
-      );
     } catch (error) {
+      if (thisRequest !== requestId.current) return;
       console.error("Failed to fetch students:", error.message);
+      setStudents([]);
+      setAvailableSubjects([]);
     } finally {
-      setLoading(false);
+      if (thisRequest === requestId.current) setLoading(false);
     }
   };
 
-  const handleTermChange = async (e) => {
+  const handleTermChange = (e) => {
     setTermType(e.target.value);
-    await fetchStudentData(e.target.value, selectedClass, academicYear);
+    fetchStudentData(e.target.value, selectedClass, academicYear);
   };
-  const handleClassChange = async (e) => {
+  const handleClassChange = (e) => {
     setSelectedClass(e.target.value);
-    await fetchStudentData(termType, e.target.value, academicYear);
+    fetchStudentData(termType, e.target.value, academicYear);
   };
-  const handleAcademicYearChange = async (e) => {
+  const handleAcademicYearChange = (e) => {
     setAcademicYear(e.target.value);
-    await fetchStudentData(termType, selectedClass, e.target.value);
+    fetchStudentData(termType, selectedClass, e.target.value);
   };
 
   const selectedStudent = students.find(
@@ -133,14 +166,14 @@ const Class = () => {
   const isColumnVisible = (col) => {
     if (!input.includes(col.key)) return false;
     if (col.hideForSS && schoolName === UKP) {
-      return !selectedStudent?.level?.startsWith("ss");
+      return !selectedStudent?.level?.toLowerCase().startsWith("ss");
     }
     return true;
   };
   const visibleColumns = COLUMNS.filter(isColumnVisible);
 
   const getExistingSubject = (subjectId) =>
-    selectedStudent?.currentTerm?.find((s) => s.subjectId === subjectId);
+    selectedStudent?.currentTerm?.find((s) => s.schoolSubjectId === subjectId);
 
   const getValue = (subjectId, key) =>
     updatedScores[selectedStudentId]?.[subjectId]?.[key] ??
@@ -160,6 +193,7 @@ const Class = () => {
     }));
   };
 
+  // Only the columns the school actually uses count toward the total.
   const calculateTotal = (subjectId) =>
     input.reduce(
       (acc, key) => acc + (parseFloat(getValue(subjectId, key)) || 0),
@@ -201,20 +235,20 @@ const Class = () => {
       );
       alert(data.message);
 
-      // merge saved scores into local data so the inputs keep their values
+      // Merge saved scores into local data so the inputs keep their values.
       setStudents((prev) =>
         prev.map((s) => {
           if (String(s.id) !== String(selectedStudentId)) return s;
-          const currentTerm = [...(s.currentTerm || [])];
+          const currentTerm = [...s.currentTerm];
           for (const { record } of records) {
             const idx = currentTerm.findIndex(
-              (x) => x.subjectId === record.subjectId,
+              (x) => x.schoolSubjectId === record.subjectId,
             );
             if (idx >= 0) {
               currentTerm[idx] = { ...currentTerm[idx], ...record.scores };
             } else {
               currentTerm.push({
-                subjectId: record.subjectId,
+                schoolSubjectId: record.subjectId,
                 subjectName: availableSubjects.find(
                   (a) => a.id === record.subjectId,
                 )?.name,

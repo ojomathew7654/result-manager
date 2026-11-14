@@ -4,12 +4,10 @@ import axios from "axios";
 import styles from "./result.module.css";
 import { useSession } from "next-auth/react";
 import UkpSecondary from "@/components/report/upksecondary/page";
-import UkpJss from "@/components/report/upkjsclass/page";
 import SolidRock from "@/components/report/solidrock/page";
 import JayRose from "@/components/report/jayrose/page";
 import NewCambridge from "@/components/report/newcambridge/page";
 import CrystalBrainsSchool from "@/components/report/CrystalBrainsSchool/page";
-import SeedOfGlory from "@/components/report/seedofglory/page";
 import Spinner from "@/components/Spinner/Spinner";
 import BeidaBasic from "@/components/report/BeidaBasic/page";
 
@@ -144,21 +142,6 @@ const StudentResult = () => {
           <>
             {school && (
               <>
-                {/* {school.name === "THE UKP SCHOOLS" &&
-                  students.map((entry, index) =>
-                    entry.student?.level?.startsWith("s") ? (
-                      <UkpSecondary
-                        key={entry.student.id || index}
-                        {...generateStudentProps(entry)}
-                      />
-                    ) : (
-                      <UkpJss
-                        key={entry.student.id || index}
-                        {...generateStudentProps(entry)}
-                      />
-                    )
-                  )} */}
-
                 {school.name === "THE UKP SCHOOLS" &&
                   students.map((entry, index) => (
                     <UkpSecondary
@@ -174,15 +157,6 @@ const StudentResult = () => {
                       {...generateStudentProps(entry)}
                     />
                   ))}
-
-                {school.name === "SEED OF GLORY" &&
-                  students.map((entry, index) => (
-                    <SeedOfGlory
-                      key={entry.student.id || index}
-                      {...generateStudentProps(entry)}
-                    />
-                  ))}
-
                 {school.name === "New Cambridge" &&
                   students.map((entry, index) => (
                     <NewCambridge

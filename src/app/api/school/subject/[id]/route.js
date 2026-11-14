@@ -1,61 +1,20 @@
-// import { NextResponse } from "next/server";
-// import prisma from "../../../../../../prisma/prisma";
-
-// export async function DELETE(request, { params }) {
-//   const { id } = params;
-//   {
-//     const [schoolId, subjectName] = id.split("-");
-//     console.log(schoolId, subjectName);
-//     console.log(subjectName);
-//     try {
-//       // Fetch the current subjects
-//       const school = await prisma.school.findUnique({
-//         where: { id: Number(schoolId) },
-//         select: { subjects: true },
-//       });
-//       console.log(school);
-//       if (!school) {
-//         return NextResponse.json(
-//           { message: "School not found" },
-//           { status: 200 }
-//         );
-//       } else {
-//         console.log("first");
-//         const updatedSubjects = school.subjects.filter(
-//           (subject) => subject !== subjectName
-//         );
-//         // Update the school's subjects
-//         await prisma.school.update({
-//           where: { id: Number(schoolId) },
-//           data: { subjects: updatedSubjects },
-//         });
-
-//         return NextResponse.json(
-//           { message: "Subject deleted successfully" },
-//           { status: 200 }
-//         );
-//       }
-//     } catch (error) {
-//       console.error(error);
-//       return NextResponse.json(
-//         { message: "Internal Server Error" },
-//         { status: 200 }
-//       );
-//     }
-//   }
-// }
-
 // src/app/api/school-subjects/route.js
 import { NextResponse } from "next/server";
 import prisma from "../../../../../../prisma/prisma";
-import { HttpError, cleanName, legacyAddToSchool } from "@/app/lib/subjects";
+import {
+  HttpError,
+  cleanName,
+  legacyAddToSchool,
+  legacyRename,
+} from "@/app/lib/subjects";
 
 // Never cache: the list must always reflect renames/creations.
 export const dynamic = "force-dynamic";
 
-// GET /api/school-subjects?schoolId=1  ->  { subjects: [{ id, name, archived }] }
-export async function GET(req) {
-  const schoolId = Number(new URL(req.url).searchParams.get("schoolId"));
+// GET /api/school/subjects?schoolId=1  ->  { subjects: [{ id, name, archived }] }
+export async function GET(request, { params }) {
+  const { id } = await params;
+  const schoolId = Number(id);
   if (!Number.isInteger(schoolId)) {
     return NextResponse.json(
       { message: "schoolId is required" },
@@ -127,10 +86,27 @@ export async function POST(req) {
 }
 
 export async function PATCH(req, { params }) {
-  const id = Number(params.id);
-  const newName = cleanName((await req.json()).name);
+  const id = Number((await params).id);
 
-  if (!Number.isInteger(id) || !newName) {
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { message: "Invalid JSON body." },
+      { status: 400 },
+    );
+  }
+
+  const newName = cleanName(body?.name);
+
+  if (!Number.isInteger(id)) {
+    return NextResponse.json(
+      { message: "Invalid subject id." },
+      { status: 400 },
+    );
+  }
+  if (!newName) {
     return NextResponse.json(
       { message: "Please enter a valid subject name." },
       { status: 400 },

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./Class.css";
 import { useSession } from "next-auth/react";
 import axios from "axios";
@@ -22,73 +22,111 @@ const COLUMNS = [
 ];
 
 const Class = () => {
+  const { data: session } = useSession();
+
   const [selectedClass, setSelectedClass] = useState("");
   const [students, setStudents] = useState([]);
-  const [userClasses, setUserClasses] = useState([]);
-  // New sessions carry subjectIds. Sessions created before the migration only
-  // carry names, so we fall back to names for them (remove once everyone has
-  // logged in again).
-  const [userSubjectIds, setUserSubjectIds] = useState(undefined);
-  const [userSubjectNames, setUserSubjectNames] = useState([]);
-  const [availableSubjects, setAvailableSubjects] = useState([]); // [{ id, name }]
-  // { [studentId]: { [subjectId]: { [scoreKey]: rawInputString } } }
+  const [availableSubjects, setAvailableSubjects] = useState([]); // [{ id, name }] id = schoolSubjectId
+  // { [studentId]: { [schoolSubjectId]: { [scoreKey]: rawInputString } } }
   const [updatedScores, setUpdatedScores] = useState({});
   const [loading, setLoading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState("");
-  const { data: session } = useSession();
   const [termType, setTermType] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [input, setInput] = useState([]);
 
-  useEffect(() => {
-    setUserClasses(session?.classes || []);
-    setUserSubjectIds(session?.subjectIds);
-    setUserSubjectNames(session?.subjects || []);
-  }, [session]);
+  // Ignore responses from older requests when filters change quickly.
+  const requestId = useRef(0);
+
+  // Teacher's assignments come straight from the session.
+  // New sessions carry subjectIds. Sessions created before the migration only
+  // carry names, so we fall back to names for them (remove once everyone has
+  // logged in again).
+  const userClasses = session?.classes || [];
+  const userSubjectIds = session?.subjectIds; // undefined on old sessions
+  const userSubjectNames = session?.subjects || [];
 
   const isAllowed = (sub) =>
     userSubjectIds
-      ? userSubjectIds.includes(sub.subjectId)
+      ? userSubjectIds.includes(sub.schoolSubjectId)
       : userSubjectNames.includes(sub.subjectName);
 
   const hasAnySubject = userSubjectIds
     ? userSubjectIds.length > 0
     : userSubjectNames.length > 0;
 
-  const fetchStudentData = async (termType, selectedClass, academicYear) => {
-    if (!termType || !selectedClass || !academicYear || !hasAnySubject) return;
+  // Load school info (name, enabled score columns) once.
+  useEffect(() => {
+    if (!session?.schoolId) return;
+    let cancelled = false;
 
+    const fetchSchool = async () => {
+      try {
+        const { data } = await axios.get(`/api/school/${session.schoolId}`);
+        if (cancelled || !data) return;
+        setInput(data.input || []);
+        setSchoolName(data.name || "");
+      } catch (error) {
+        console.error("Error fetching school:", error);
+      }
+    };
+    fetchSchool();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.schoolId]);
+
+  const clearResults = () => {
+    setStudents([]);
+    setAvailableSubjects([]);
+    setSelectedStudentId("");
+    setUpdatedScores({});
+  };
+
+  const fetchStudentData = async (term, className, year) => {
+    // Clear stale data if any filter is missing.
+    if (!term || !className || !year || !hasAnySubject) {
+      requestId.current++;
+      clearResults();
+      setLoading(false);
+      return;
+    }
+
+    const thisRequest = ++requestId.current;
     setLoading(true);
+
     try {
       const { data } = await axios.get(
-        `/api/student/class/result/${termType}-${
+        `/api/student/class/result/${term}-${
           session.schoolId
-        }-${encodeURIComponent(academicYear)}-${selectedClass}`,
+        }-${encodeURIComponent(year)}-${className}`,
       );
-      const res = await axios.get(`/api/school/${session.schoolId}`);
-      setInput(res.data.input);
-      setSchoolName(res.data.name);
+      if (thisRequest !== requestId.current) return; // a newer request won
 
-      const transformedData = data
+      const transformed = (Array.isArray(data) ? data : [])
         .map((student) => ({
           ...student,
-          currentTerm: student.terms.find((t) => t.termType === termType),
+          currentTerm: student.terms?.find((t) => t.termType === term),
         }))
         .sort((a, b) =>
-          a.surname
+          (a.surname ?? "")
             .toLowerCase()
             .trim()
-            .localeCompare(b.surname.toLowerCase().trim()),
+            .localeCompare((b.surname ?? "").toLowerCase().trim()),
         );
-      setStudents(transformedData);
+      setStudents(transformed);
 
-      // only the subjects this teacher is assigned to, keyed by id
+      // Only the subjects this teacher is assigned to, keyed by schoolSubjectId.
       const subjectMap = new Map();
-      for (const student of transformedData) {
+      for (const student of transformed) {
         for (const sub of student.currentTerm?.subjects || []) {
-          if (sub.subjectId != null && isAllowed(sub)) {
-            subjectMap.set(sub.subjectId, sub.subjectName);
+          if (sub.schoolSubjectId != null && isAllowed(sub)) {
+            subjectMap.set(
+              sub.schoolSubjectId,
+              sub.subjectName ?? "Unknown subject",
+            );
           }
         }
       }
@@ -101,22 +139,25 @@ const Class = () => {
       setSelectedStudentId("");
       setUpdatedScores({});
     } catch (error) {
+      if (thisRequest !== requestId.current) return;
       console.error("Failed to fetch students:", error.message);
+      clearResults();
+    } finally {
+      if (thisRequest === requestId.current) setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleTermChange = async (e) => {
+  const handleTermChange = (e) => {
     setTermType(e.target.value);
-    await fetchStudentData(e.target.value, selectedClass, academicYear);
+    fetchStudentData(e.target.value, selectedClass, academicYear);
   };
-  const handleClassChange = async (e) => {
+  const handleClassChange = (e) => {
     setSelectedClass(e.target.value);
-    await fetchStudentData(termType, e.target.value, academicYear);
+    fetchStudentData(termType, e.target.value, academicYear);
   };
-  const handleAcademicYearChange = async (e) => {
+  const handleAcademicYearChange = (e) => {
     setAcademicYear(e.target.value);
-    await fetchStudentData(termType, selectedClass, e.target.value);
+    fetchStudentData(termType, selectedClass, e.target.value);
   };
 
   const selectedStudent = students.find(
@@ -126,7 +167,7 @@ const Class = () => {
   const isColumnVisible = (col) => {
     if (!input.includes(col.key)) return false;
     if (col.hideForSS && schoolName === UKP) {
-      return !selectedStudent?.level?.startsWith("ss");
+      return !selectedStudent?.level?.toLowerCase().startsWith("ss");
     }
     return true;
   };
@@ -134,7 +175,7 @@ const Class = () => {
 
   const getExistingSubject = (subjectId) =>
     selectedStudent?.currentTerm?.subjects?.find(
-      (s) => s.subjectId === subjectId,
+      (s) => s.schoolSubjectId === subjectId,
     );
 
   const getValue = (subjectId, key) =>
@@ -193,6 +234,7 @@ const Class = () => {
       );
       alert(data.message);
 
+      // Merge saved scores into local data so the inputs keep their values.
       setStudents((prev) =>
         prev.map((s) => {
           if (String(s.id) !== String(selectedStudentId)) return s;
@@ -200,13 +242,13 @@ const Class = () => {
           const subjects = [...(term.subjects || [])];
           for (const { record } of records) {
             const idx = subjects.findIndex(
-              (x) => x.subjectId === record.subjectId,
+              (x) => x.schoolSubjectId === record.subjectId,
             );
             if (idx >= 0) {
               subjects[idx] = { ...subjects[idx], ...record.scores };
             } else {
               subjects.push({
-                subjectId: record.subjectId,
+                schoolSubjectId: record.subjectId,
                 subjectName: availableSubjects.find(
                   (a) => a.id === record.subjectId,
                 )?.name,
@@ -261,7 +303,7 @@ const Class = () => {
 
         <select value={selectedClass} onChange={handleClassChange}>
           <option value="">Select class</option>
-          {userClasses?.map((classItem) => (
+          {userClasses.map((classItem) => (
             <option key={classItem} value={classItem}>
               {classItem}
             </option>
@@ -290,46 +332,52 @@ const Class = () => {
             <h2>
               {selectedStudent.surname} {selectedStudent.name}
             </h2>
-            <div className="tableContainer">
-              <table border={3}>
-                <thead>
-                  <tr>
-                    <th>No</th>
-                    <th>Subject</th>
-                    {visibleColumns.map((col) => (
-                      <th key={col.key}>{col.label}</th>
-                    ))}
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {availableSubjects.map((subject, index) => (
-                    <tr key={subject.id}>
-                      <td>{index + 1}</td>
-                      <td>{subject.name}</td>
+
+            {availableSubjects.length === 0 ? (
+              <p>None of your subjects are assigned to this class.</p>
+            ) : (
+              <div className="tableContainer">
+                <table border={3}>
+                  <thead>
+                    <tr>
+                      <th>No</th>
+                      <th>Subject</th>
                       {visibleColumns.map((col) => (
-                        <td key={col.key}>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={getValue(subject.id, col.key)}
-                            onChange={(e) =>
-                              handleScoreChange(
-                                subject.id,
-                                col.key,
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
+                        <th key={col.key}>{col.label}</th>
                       ))}
-                      <td className="total">{calculateTotal(subject.id)}</td>
+                      <th>Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {availableSubjects.map((subject, index) => (
+                      <tr key={subject.id}>
+                        <td>{index + 1}</td>
+                        <td>{subject.name}</td>
+                        {visibleColumns.map((col) => (
+                          <td key={col.key}>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={getValue(subject.id, col.key)}
+                              onChange={(e) =>
+                                handleScoreChange(
+                                  subject.id,
+                                  col.key,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                        ))}
+                        <td className="total">{calculateTotal(subject.id)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             <div className="save-button-container">
               <button
                 className="updateScoresBtn"
