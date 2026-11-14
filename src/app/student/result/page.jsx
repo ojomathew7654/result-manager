@@ -2,13 +2,10 @@
 import { useState } from "react";
 import { redirect, useRouter } from "next/navigation";
 import axios from "axios";
-
 import SolidRock from "@/components/report/solidrock/page";
-import UkpSecondary from "@/components/report/upksecondary/page";
 import styles from "./StudentReult.module.css";
 import JayRose from "@/components/report/jayrose/page";
 import NewCambridge from "@/components/report/newcambridge/page";
-import UkpJss from "@/components/report/upkjsclass/page";
 import CrystalBrainsSchool from "@/components/report/CrystalBrainsSchool/page";
 import Spinner from "@/components/Spinner/Spinner";
 import BeidaBasic from "@/components/report/BeidaBasic/page";
@@ -144,43 +141,6 @@ const EachStudentResult = () => {
           <>
             {schoolName && (
               <>
-                {schoolName === "THE UKP SCHOOLS" &&
-                  (student?.level?.startsWith("s") ? (
-                    <UkpSecondary
-                      student={student}
-                      attendanceList={attendanceList}
-                      school={school}
-                      subjects={subjects}
-                      subjectScores={subjectScores}
-                      subjectPosition={subjectPosition}
-                      attendance={attendance}
-                      totalStudents={totalStudents}
-                      psychomotor={psychomotor}
-                      effectiveTraits={effectiveTraits}
-                      formTeacherRemark={formTeacherRemark}
-                      headOfSchoolRemark={headOfSchoolRemark}
-                      formTeacherName={formTeacherName}
-                      selectedTerm={selectedTerm}
-                    />
-                  ) : (
-                    <UkpJss
-                      student={student}
-                      attendanceList={attendanceList}
-                      school={school}
-                      subjects={subjects}
-                      subjectScores={subjectScores}
-                      subjectPosition={subjectPosition}
-                      attendance={attendance}
-                      totalStudents={totalStudents}
-                      psychomotor={psychomotor}
-                      effectiveTraits={effectiveTraits}
-                      formTeacherRemark={formTeacherRemark}
-                      headOfSchoolRemark={headOfSchoolRemark}
-                      formTeacherName={formTeacherName}
-                      selectedTerm={selectedTerm}
-                    />
-                  ))}
-
                 {schoolName === "SOLID ROCK ACADEMY" && (
                   <SolidRock
                     student={student}

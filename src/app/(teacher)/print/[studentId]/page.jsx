@@ -3,8 +3,6 @@ import { useState, useEffect, Suspense } from "react";
 import axios from "axios";
 import styles from "../result.module.css";
 import { useSession } from "next-auth/react";
-import UkpSecondary from "@/components/report/upksecondary/page";
-import UkpJss from "@/components/report/upkjsclass/page";
 import SolidRock from "@/components/report/solidrock/page";
 import JayRose from "@/components/report/jayrose/page";
 import NewCambridge from "@/components/report/newcambridge/page";
@@ -129,41 +127,6 @@ const EachStudentResult = ({ params }) => {
           <>
             {schoolName && (
               <>
-                {schoolName === "THE UKP SCHOOLS" &&
-                  (student?.level?.startsWith("s") ? (
-                    <UkpSecondary
-                      student={student}
-                      attendanceList={attendanceList}
-                      school={school}
-                      subjects={subjects}
-                      subjectScores={subjectScores}
-                      subjectPosition={subjectPosition}
-                      attendance={attendance}
-                      totalStudents={totalStudents}
-                      psychomotor={psychomotor}
-                      effectiveTraits={effectiveTraits}
-                      formTeacherRemark={formTeacherRemark}
-                      headOfSchoolRemark={headOfSchoolRemark}
-                      formTeacherName={formTeacherName}
-                    />
-                  ) : (
-                    <UkpJss
-                      student={student}
-                      attendanceList={attendanceList}
-                      school={school}
-                      subjects={subjects}
-                      subjectScores={subjectScores}
-                      subjectPosition={subjectPosition}
-                      attendance={attendance}
-                      totalStudents={totalStudents}
-                      psychomotor={psychomotor}
-                      effectiveTraits={effectiveTraits}
-                      formTeacherRemark={formTeacherRemark}
-                      headOfSchoolRemark={headOfSchoolRemark}
-                      formTeacherName={formTeacherName}
-                    />
-                  ))}
-
                 {schoolName === "SOLID ROCK ACADEMY" && (
                   <SolidRock
                     student={student}

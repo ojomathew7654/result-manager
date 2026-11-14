@@ -331,7 +331,7 @@ const Class = () => {
       {selectedClass && selectedStudent && (
         <div className={styles.tableContainer}>
           <div>
-            <h2>
+            <h2 className={styles.selectedStudent}>
               {selectedStudent.surname} {selectedStudent.name}
             </h2>
             <table border={1}>

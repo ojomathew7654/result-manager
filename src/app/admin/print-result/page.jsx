@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import styles from "./result.module.css";
 import { useSession } from "next-auth/react";
-import UkpSecondary from "@/components/report/upksecondary/page";
 import SolidRock from "@/components/report/solidrock/page";
 import JayRose from "@/components/report/jayrose/page";
 import NewCambridge from "@/components/report/newcambridge/page";
@@ -142,14 +141,6 @@ const StudentResult = () => {
           <>
             {school && (
               <>
-                {school.name === "THE UKP SCHOOLS" &&
-                  students.map((entry, index) => (
-                    <UkpSecondary
-                      key={entry.student.id || index}
-                      {...generateStudentProps(entry)}
-                    />
-                  ))}
-
                 {school.name === "SOLID ROCK ACADEMY" &&
                   students.map((entry, index) => (
                     <SolidRock
