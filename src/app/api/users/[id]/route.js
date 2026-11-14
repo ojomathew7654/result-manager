@@ -29,8 +29,8 @@ export async function GET(request, { params }) {
         schoolId: true,
         classes: true,
         teacherOf: true,
+        password: true,
         assignedSubjects: { select: { id: true, name: true } },
-        // password is deliberately not selected
       },
     });
 

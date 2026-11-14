@@ -1,4 +1,3 @@
-// src/app/api/school-subjects/route.js
 import { NextResponse } from "next/server";
 import prisma from "../../../../../../prisma/prisma";
 import {
@@ -7,11 +6,12 @@ import {
   legacyAddToSchool,
   legacyRename,
 } from "@/app/lib/subjects";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // Never cache: the list must always reflect renames/creations.
 export const dynamic = "force-dynamic";
 
-// GET /api/school/subjects?schoolId=1  ->  { subjects: [{ id, name, archived }] }
 export async function GET(request, { params }) {
   const { id } = await params;
   const schoolId = Number(id);
@@ -38,7 +38,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// POST /api/school-subjects  { schoolId, name }
 export async function POST(req) {
   const body = await req.json();
   const schoolId = Number(body.schoolId);
@@ -171,6 +170,105 @@ export async function PATCH(req, { params }) {
     console.error("Error renaming subject:", error);
     return NextResponse.json(
       { message: "Failed to rename subject" },
+      { status: 500 },
+    );
+  }
+}
+
+const SCORE_FIELDS = [
+  "firstCA",
+  "secondCA",
+  "thirdCA",
+  "fourthCA",
+  "fifthCA",
+  "sixthCA",
+  "assignment",
+  "project",
+  "affective",
+  "note",
+  "rt",
+  "exam",
+];
+
+export async function DELETE(req, { params }) {
+  const id = Number((await params).id);
+  if (!Number.isInteger(id)) {
+    return NextResponse.json(
+      { message: "Invalid subject id." },
+      { status: 400 },
+    );
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const schoolId = Number(session.schoolId);
+
+  try {
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const subject = await tx.schoolSubject.findFirst({
+          where: { id, schoolId },
+        });
+        if (!subject) throw new HttpError(404, "Subject not found.");
+
+        // 1. students: every score row linked to this subject
+        const { count: studentRows } = await tx.subject.deleteMany({
+          where: { schoolSubjectId: id },
+        });
+
+        // 2. school: remove the old text copy of the name
+        const school = await tx.school.findUnique({
+          where: { id: schoolId },
+          select: { subjects: true },
+        });
+        if (school?.subjects?.includes(subject.name)) {
+          await tx.school.update({
+            where: { id: schoolId },
+            data: {
+              subjects: school.subjects.filter((n) => n !== subject.name),
+            },
+          });
+        }
+
+        // 3. teachers: remove the old text copy of the name
+        const teachers = await tx.user.findMany({
+          where: { schoolId, subjects: { has: subject.name } },
+          select: { id: true, subjects: true },
+        });
+        for (const t of teachers) {
+          await tx.user.update({
+            where: { id: t.id },
+            data: { subjects: t.subjects.filter((n) => n !== subject.name) },
+          });
+        }
+
+        // 4. the subject itself (teacher join rows go with it)
+        await tx.schoolSubject.delete({ where: { id } });
+
+        return { name: subject.name, studentRows, teachers: teachers.length };
+      },
+      { timeout: 60000 },
+    );
+
+    return NextResponse.json(
+      {
+        message: `"${result.name}" deleted (${result.studentRows} student records removed).`,
+        id,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { message: error.message },
+        { status: error.status },
+      );
+    }
+    console.error("Error deleting subject:", error);
+    return NextResponse.json(
+      { message: "Failed to delete subject" },
       { status: 500 },
     );
   }

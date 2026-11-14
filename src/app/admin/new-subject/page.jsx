@@ -103,6 +103,28 @@ const NewSubject = () => {
     }
   };
 
+  const deleteSubject = async (subject) => {
+    if (
+      !confirm(
+        `Delete "${subject.name}"? This also removes it from every class and teacher. It cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await axios.delete(`/api/school/subject/${subject.id}`);
+      setSchoolSubjects((prev) => prev.filter((s) => s.id !== subject.id));
+      if (String(subject.id) === String(selectedSubjectId))
+        setSelectedSubjectId("");
+      showAlert(data.message);
+    } catch (err) {
+      showAlert(apiMessage(err, "Failed to delete subject."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const classPayload = () => {
     const [className, variant] = selectedClass.split("-");
     return {
@@ -284,12 +306,21 @@ const NewSubject = () => {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: "flex" }}>
+                  <div style={{ display: "flex", gap: "6px" }}>
                     <button
                       className={styles.edit}
+                      disabled={loading}
                       onClick={() => startEditing(subject)}
                     >
                       Rename
+                    </button>
+                    <button
+                      className={styles.edit}
+                      style={{ background: "#d32f2f", color: "#fff" }}
+                      disabled={loading}
+                      onClick={() => deleteSubject(subject)}
+                    >
+                      Delete
                     </button>
                   </div>
                 )}
