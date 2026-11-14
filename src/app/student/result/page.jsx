@@ -10,7 +10,6 @@ import JayRose from "@/components/report/jayrose/page";
 import NewCambridge from "@/components/report/newcambridge/page";
 import UkpJss from "@/components/report/upkjsclass/page";
 import CrystalBrainsSchool from "@/components/report/CrystalBrainsSchool/page";
-import SeedOfGlory from "@/components/report/seedofglory/page";
 import Spinner from "@/components/Spinner/Spinner";
 import BeidaBasic from "@/components/report/BeidaBasic/page";
 
@@ -251,24 +250,7 @@ const EachStudentResult = () => {
                     selectedTerm={selectedTerm}
                   />
                 )}
-                {schoolName === "SEED OF GLORY" && (
-                  <SeedOfGlory
-                    student={student}
-                    attendanceList={attendanceList}
-                    school={school}
-                    subjects={subjects}
-                    subjectScores={subjectScores}
-                    subjectPosition={subjectPosition}
-                    attendance={attendance}
-                    totalStudents={totalStudents}
-                    psychomotor={psychomotor}
-                    effectiveTraits={effectiveTraits}
-                    formTeacherRemark={formTeacherRemark}
-                    headOfSchoolRemark={headOfSchoolRemark}
-                    formTeacherName={formTeacherName}
-                    selectedTerm={selectedTerm}
-                  />
-                )}
+
                 {schoolName === "Beida Basic School" && (
                   <BeidaBasic
                     student={student}
