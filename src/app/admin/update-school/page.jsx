@@ -52,7 +52,6 @@ const UpdateSchool = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    // ✅ Handle checkboxes
     if (type === "checkbox") {
       setFormData((prev) => ({
         ...prev,

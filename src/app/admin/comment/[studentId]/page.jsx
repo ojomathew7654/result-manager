@@ -13,7 +13,6 @@ const EachStudentResult = ({ params }) => {
     { trait: "Crafts", rating: "Excellent" },
     { trait: "Sports", rating: "Very Good" },
     // { trait: "Musical Skills", rating: "Good" },
-    // { trait: "Dance", rating: "Excellent" },
     { trait: "Coordination", rating: "Very Good" },
   ];
 

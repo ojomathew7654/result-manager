@@ -40,7 +40,6 @@ const AllTeacherStudents = () => {
           session.schoolId
         }-${encodedAcademicYear}-${selectedClass}`,
       );
-      console.log(data);
       setStudents(data);
     } catch (err) {
       console.log(err);

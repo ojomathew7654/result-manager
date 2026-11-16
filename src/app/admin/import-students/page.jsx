@@ -18,7 +18,6 @@ const ImportStudents = () => {
           // Ensure every row has exactly 10 elements, filling missing ones with empty strings
           return Array.from({ length: 10 }, (_, i) => item[i] || "");
         });
-      console.log(filteredData);
       setStudentData(filteredData);
     } catch (error) {
       console.error("Error reading the Excel file:", error);
@@ -52,7 +51,7 @@ const ImportStudents = () => {
 
         const { data } = await axios.post(
           "/api/student/create",
-          formattedStudent
+          formattedStudent,
         );
         console.log(data);
         alert(data.message);
