@@ -13,7 +13,7 @@ export async function GET(req) {
     if (!schoolId || !level || !selectedTerm || !academicYear) {
       return new NextResponse(
         JSON.stringify({ message: "Missing required fields", status: 400 }),
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -39,29 +39,49 @@ export async function GET(req) {
     if (!students.length) {
       return new NextResponse(
         JSON.stringify({ message: "No students found", status: 404 }),
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Process student data
     const processedStudents = students.map((student) => {
       const filteredTerms = student.terms.map((term) => {
-        const filteredSubjects = term.subjects.filter((subject) => {
-          const totalScore =
-            (subject.firstCA || 0) +
-            (subject.secondCA || 0) +
-            (subject.thirdCA || 0) +
-            (subject.fourthCA || 0) +
-            (subject.fifthCA || 0) +
-            (subject.sixthCA || 0) +
-            (subject.note || 0) +
-            (subject.rt || 0) +
-            (subject.project || 0) +
-            (subject.affective || 0) +
-            (subject.assignment || 0) +
-            (subject.exam || 0);
-          return totalScore > 0;
-        });
+        // const filteredSubjects = term.subjects.filter((subject) => {
+        //   const totalScore =
+        //     (subject.firstCA || 0) +
+        //     (subject.secondCA || 0) +
+        //     (subject.thirdCA || 0) +
+        //     (subject.fourthCA || 0) +
+        //     (subject.fifthCA || 0) +
+        //     (subject.sixthCA || 0) +
+        //     (subject.note || 0) +
+        //     (subject.rt || 0) +
+        //     (subject.project || 0) +
+        //     (subject.affective || 0) +
+        //     (subject.assignment || 0) +
+        //     (subject.exam || 0);
+        //   return totalScore > 0;
+        // });
+
+        const filteredSubjects = term.subjects
+          .filter((subject) => {
+            const totalScore =
+              (subject.firstCA || 0) +
+              (subject.secondCA || 0) +
+              (subject.thirdCA || 0) +
+              (subject.fourthCA || 0) +
+              (subject.fifthCA || 0) +
+              (subject.sixthCA || 0) +
+              (subject.note || 0) +
+              (subject.rt || 0) +
+              (subject.project || 0) +
+              (subject.affective || 0) +
+              (subject.assignment || 0) +
+              (subject.exam || 0);
+
+            return totalScore > 0;
+          })
+          .map(({ schoolSubjectId, ...subject }) => subject);
 
         return { ...term, subjects: filteredSubjects };
       });
@@ -80,7 +100,7 @@ export async function GET(req) {
         error: error.message,
         status: 500,
       }),
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
